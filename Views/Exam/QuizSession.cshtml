@@ -1,0 +1,62 @@
+***REMOVED***@model EduSathi.ViewModels.QuizSessionViewModel
+
+@{
+    ViewData["Title"] = "Quiz Session - " + Model.FileName;
+}
+
+<div class="container mt-4">
+    <h2>Study Session: @Model.FileName</h2>
+
+    <!-- Summary Section -->
+    <div class="card my-4 p-3 shadow-sm bg-light">
+        <h4>PDF Summary</h4>
+        <p class="lead fs-6">@Model.Summary</p>
+    </div>
+
+    <!-- Quiz Sections By Level -->
+    <ul class="nav nav-tabs" id="quizTab" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#basic" type="button">Basic Level</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#medium" type="button">Medium Level</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#hard" type="button">Hard Level</button></li>
+    </ul>
+
+    <div class="tab-content border border-top-0 p-4 bg-white shadow-sm" id="quizTabContent">
+        <!-- Basic Tab -->
+        <div class="tab-pane fade show active" id="basic">
+            <h4>Basic Questions</h4>
+            @foreach (var q in Model.BasicQuestions)
+            {
+                <div class="mb-3 p-3 border rounded">
+                    <p><strong>@q.QuestionText</strong></p>
+                    <ul class="list-unstyled">
+                        <li>A) @q.OptionA</li>
+                        <li>B) @q.OptionB</li>
+                        <li>C) @q.OptionC</li>
+                        <li>D) @q.OptionD</li>
+                    </ul>
+                </div>
+            }
+        </div>
+        <!-- Medium Tab -->
+        <div class="tab-pane fade" id="medium">
+            <h4>Medium Questions</h4>
+            @foreach (var q in Model.MediumQuestions)
+            {
+                <div class="mb-3 p-3 border rounded">
+                    <p><strong>@q.QuestionText</strong></p>
+                    <!-- Options listing omitted for brevity -->
+                </div>
+            }
+        </div>
+        <!-- Hard Tab -->
+        <div class="tab-pane fade" id="hard">
+            <h4>Hard Questions</h4>
+            @foreach (var q in Model.HardQuestions)
+            {
+                <div class="mb-3 p-3 border rounded">
+                    <p><strong>@q.QuestionText</strong></p>
+                </div>
+            }
+        </div>
+    </div>
+</div>

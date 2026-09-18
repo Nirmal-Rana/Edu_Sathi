@@ -1,0 +1,34 @@
+***REMOVED***@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-md-4">
+        <div class="card shadow-sm p-4">
+            <h3 class="text-center mb-4">EduSathi Login</h3>
+
+            <!-- Posts directly to your AccountController Login action -->
+            <form method="post" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]">
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                <div class="form-floating mb-3">
+                    <input name="email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                    <label>Email / Username</label>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <input name="password" type="password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Password" />
+                    <label>Password</label>
+                </div>
+
+                <button type="submit" class="w-100 btn btn-lg btn-primary mb-3">Login</button>
+
+                <div class="text-center">
+                    <a asp-controller="Account" asp-action="Register" class="text-decoration-none">
+                        <i class="bi bi-person-plus-fill"></i> Register as a new user
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
