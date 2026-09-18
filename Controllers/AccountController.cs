@@ -30,6 +30,7 @@ namespace EduSathi.Controllers
 
             if (ModelState.IsValid)
             {
+                // This signs the user in using Identity
                 var result = await _signInManager.PasswordSignInAsync(email, password, false, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
@@ -38,6 +39,7 @@ namespace EduSathi.Controllers
                 ModelState.AddModelError(string.Empty, "Invalid login attempt.");
             }
 
+            // If we got this far, something failed, redisplay form
             return View();
         }
 
