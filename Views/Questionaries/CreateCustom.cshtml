@@ -1,0 +1,66 @@
+﻿@model IEnumerable<EduSathi.Models.UploadedDocument>
+
+@{
+    ViewData["Title"] = "Create Custom Questionary";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="container mt-4">
+    <h2 class="fw-bold mb-3">Create Custom Quiz Room</h2>
+    <p class="text-muted">Upload one or more PDFs or pick from your saved files, choose your category, and generate your room.</p>
+    <hr />
+
+    <form asp-action="CreateCustom" enctype="multipart/form-data" method="post" class="card p-4 shadow-sm border-0 bg-white">
+
+        <!-- Room Name Input (For Global rooms) -->
+        <div class="mb-4">
+            <label class="form-label fw-bold">Room / Quiz Name</label>
+            <input type="text" name="roomName" class="form-control" placeholder="e.g. Midterm Preparation Hub" required />
+        </div>
+
+        <!-- Multi-PDF Upload Container -->
+        <div class="mb-4">
+            <label class="form-label fw-bold">Upload New PDFs From Device (Multiple allowed)</label>
+            <input type="file" name="newPdfFiles" class="form-control" accept=".pdf" multiple />
+            <small class="text-muted">Hold Ctrl or Shift to select multiple PDF files from your device.</small>
+        </div>
+
+        <div class="text-center my-2 text-muted">- OR -</div>
+
+        <!-- Select from Previously Uploaded PDFs -->
+        <div class="mb-4">
+            <label class="form-label fw-bold">Select from Previously Uploaded PDFs</label>
+            <select name="selectedDocumentIds" class="form-select" multiple asp-items="@(new SelectList(Model, "Id", "FileName"))" style="height: 120px;">
+            </select>
+            <small class="text-muted">Hold Ctrl to select multiple saved files.</small>
+        </div>
+
+        <hr class="text-muted my-3" />
+
+        <!-- Category Section (Solo vs Global) -->
+        <div class="mb-4">
+            <label class="form-label fw-bold">Select Category</label>
+            <div class="d-flex gap-4 mt-2">
+                <div class="form-check card p-3 flex-fill border cursor-pointer">
+                    <input class="form-check-input" type="radio" name="category" id="catSolo" value="Solo" checked>
+                    <label class="form-check-label fw-semibold" for="catSolo">
+                        <i class="bi bi-person-fill text-primary"></i> Solo
+                        <p class="text-muted small mb-0 fw-normal">Generates private MCQs exclusively for your personal practice.</p>
+                    </label>
+                </div>
+
+                <div class="form-check card p-3 flex-fill border cursor-pointer">
+                    <input class="form-check-input" type="radio" name="category" id="catGlobal" value="Global">
+                    <label class="form-check-label fw-semibold" for="catGlobal">
+                        <i class="bi bi-globe text-success"></i> Global (Live Room)
+                        <p class="text-muted small mb-0 fw-normal">Creates a shared live room with a code so peers can join and compete in real-time.</p>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg mt-2 w-100">
+            <i class="bi bi-cpu-fill"></i> Generate Questions & Launch Room
+        </button>
+    </form>
+</div>

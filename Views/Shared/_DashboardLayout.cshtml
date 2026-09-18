@@ -69,21 +69,26 @@
 
             <hr class="text-muted mx-3" />
 
-            <!-- Sidebar Links -->
+            <!-- Sidebar Links with Dynamic Active Highlighting -->
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link active" asp-controller="Exam" asp-action="Index">
+                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Profile" ? "active" : "")" asp-controller="Questionaries" asp-action="Profile">
+                        <i class="bi bi-person-badge"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Exam" ? "active" : "")" asp-controller="Exam" asp-action="Index">
                         <i class="bi bi-speedometer2"></i> Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
-                        <i class="bi bi-journal-text"></i> My Quizzes
+                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Index" && ViewContext.RouteData.Values["controller"]?.ToString() == "Questionaries" ? "active" : "")" asp-controller="Questionaries" asp-action="Index">
+                        <i class="bi bi-collection-fill"></i> Questionaries
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
-                        <i class="bi bi-gear"></i> Settings
+                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "History" ? "active" : "")" asp-controller="Questionaries" asp-action="History">
+                        <i class="bi bi-clock-history"></i> History
                     </a>
                 </li>
             </ul>
@@ -102,7 +107,7 @@
         }
     </nav>
 
-    <!-- Main Content Area (Top Navbar Completely Removed) -->
+    <!-- Main Content Area -->
     <main>
         @RenderBody()
     </main>

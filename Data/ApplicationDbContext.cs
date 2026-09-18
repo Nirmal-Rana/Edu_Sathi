@@ -14,5 +14,8 @@ namespace EduSathi.Data
 
         public DbSet<UploadedDocument> UploadedDocuments { get; set; }
         public DbSet<Question> Questions { get; set; }
+        public DbSet<CustomRoom> CustomRooms { get; set; }
+        public DbSet<RoomParticipant> RoomParticipants { get; set; }
+        public DbSet<QuizHistory> QuizHistories { get; set; }
     }
 }
