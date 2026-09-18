@@ -1,19 +1,22 @@
-***REMOVED***using Microsoft.AspNetCore.Identity;
+***REMOVED***using EduSathi.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EduSathi.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public AccountController(SignInManager<IdentityUser> signInManager)
+        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
         {
+            _userManager = userManager;
             _signInManager = signInManager;
         }
 
         [HttpGet]
-        public IActionResult Login(string returnUrl = null)
+        public IActionResult Login(string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
             return View();
@@ -21,13 +24,12 @@ namespace EduSathi.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(string email, string password, string returnUrl = null)
+        public async Task<IActionResult> Login(string email, string password, string? returnUrl = null)
         {
             returnUrl ??= Url.Action("Index", "Exam");
 
             if (ModelState.IsValid)
             {
-                // This signs the user in using Identity
                 var result = await _signInManager.PasswordSignInAsync(email, password, false, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
@@ -36,13 +38,46 @@ namespace EduSathi.Controllers
                 ModelState.AddModelError(string.Empty, "Invalid login attempt.");
             }
 
-            // If we got this far, something failed, redisplay form
             return View();
         }
 
         [HttpGet]
         public IActionResult Register()
         {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(string fullName, string contact, string email, string password, string confirmPassword)
+        {
+            if (password != confirmPassword)
+            {
+                ModelState.AddModelError(string.Empty, "The password and confirmation password do not match.");
+                return View();
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                FullName = fullName,
+                ContactNumber = contact
+            };
+
+            var result = await _userManager.CreateAsync(user, password);
+
+            if (result.Succeeded)
+            {
+                await _signInManager.SignInAsync(user, isPersistent: false);
+                return RedirectToAction("Index", "Exam");
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
             return View();
         }
     }
