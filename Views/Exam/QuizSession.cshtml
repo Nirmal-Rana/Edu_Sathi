@@ -15,48 +15,112 @@
 
     <!-- Quiz Sections By Level -->
     <ul class="nav nav-tabs" id="quizTab" role="tablist">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#basic" type="button">Basic Level</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#medium" type="button">Medium Level</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#hard" type="button">Hard Level</button></li>
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#basic" type="button">Basic Level</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#medium" type="button">Medium Level</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#hard" type="button">Hard Level</button>
+        </li>
     </ul>
 
     <div class="tab-content border border-top-0 p-4 bg-white shadow-sm" id="quizTabContent">
+
         <!-- Basic Tab -->
         <div class="tab-pane fade show active" id="basic">
-            <h4>Basic Questions</h4>
+            <h4 class="mb-4">Basic Questions</h4>
             @foreach (var q in Model.BasicQuestions)
             {
-                <div class="mb-3 p-3 border rounded">
-                    <p><strong>@q.QuestionText</strong></p>
-                    <ul class="list-unstyled">
-                        <li>A) @q.OptionA</li>
-                        <li>B) @q.OptionB</li>
-                        <li>C) @q.OptionC</li>
-                        <li>D) @q.OptionD</li>
+                <div class="mb-4 p-3 border rounded shadow-sm">
+                    <p class="fs-5"><strong>@q.QuestionText</strong></p>
+                    <ul class="list-unstyled mb-3 ms-3">
+                        <li class="mb-1"><strong>A)</strong> @q.OptionA</li>
+                        <li class="mb-1"><strong>B)</strong> @q.OptionB</li>
+                        <li class="mb-1"><strong>C)</strong> @q.OptionC</li>
+                        <li class="mb-1"><strong>D)</strong> @q.OptionD</li>
                     </ul>
+
+                    <div id="answer-@q.Id" style="display: none;" class="alert alert-success mt-3">
+                        <strong>Correct Answer:</strong> @q.CorrectOption
+                        <hr class="my-2" />
+                        <strong>Explanation:</strong> @q.Explanation
+                    </div>
+
+                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="toggleAnswer('answer-@q.Id')">
+                        Show/Hide Answer
+                    </button>
                 </div>
             }
         </div>
+
         <!-- Medium Tab -->
         <div class="tab-pane fade" id="medium">
-            <h4>Medium Questions</h4>
+            <h4 class="mb-4">Medium Questions</h4>
             @foreach (var q in Model.MediumQuestions)
             {
-                <div class="mb-3 p-3 border rounded">
-                    <p><strong>@q.QuestionText</strong></p>
-                    <!-- Options listing omitted for brevity -->
+                <div class="mb-4 p-3 border rounded shadow-sm">
+                    <p class="fs-5"><strong>@q.QuestionText</strong></p>
+                    <ul class="list-unstyled mb-3 ms-3">
+                        <li class="mb-1"><strong>A)</strong> @q.OptionA</li>
+                        <li class="mb-1"><strong>B)</strong> @q.OptionB</li>
+                        <li class="mb-1"><strong>C)</strong> @q.OptionC</li>
+                        <li class="mb-1"><strong>D)</strong> @q.OptionD</li>
+                    </ul>
+
+                    <div id="answer-@q.Id" style="display: none;" class="alert alert-success mt-3">
+                        <strong>Correct Answer:</strong> @q.CorrectOption
+                        <hr class="my-2" />
+                        <strong>Explanation:</strong> @q.Explanation
+                    </div>
+
+                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="toggleAnswer('answer-@q.Id')">
+                        Show/Hide Answer
+                    </button>
                 </div>
             }
         </div>
+
         <!-- Hard Tab -->
         <div class="tab-pane fade" id="hard">
-            <h4>Hard Questions</h4>
+            <h4 class="mb-4">Hard Questions</h4>
             @foreach (var q in Model.HardQuestions)
             {
-                <div class="mb-3 p-3 border rounded">
-                    <p><strong>@q.QuestionText</strong></p>
+                <div class="mb-4 p-3 border rounded shadow-sm">
+                    <p class="fs-5"><strong>@q.QuestionText</strong></p>
+                    <ul class="list-unstyled mb-3 ms-3">
+                        <li class="mb-1"><strong>A)</strong> @q.OptionA</li>
+                        <li class="mb-1"><strong>B)</strong> @q.OptionB</li>
+                        <li class="mb-1"><strong>C)</strong> @q.OptionC</li>
+                        <li class="mb-1"><strong>D)</strong> @q.OptionD</li>
+                    </ul>
+
+                    <div id="answer-@q.Id" style="display: none;" class="alert alert-success mt-3">
+                        <strong>Correct Answer:</strong> @q.CorrectOption
+                        <hr class="my-2" />
+                        <strong>Explanation:</strong> @q.Explanation
+                    </div>
+
+                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="toggleAnswer('answer-@q.Id')">
+                        Show/Hide Answer
+                    </button>
                 </div>
             }
         </div>
+
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function toggleAnswer(elementId) {
+            var answerDiv = document.getElementById(elementId);
+            if (answerDiv.style.display === "none" || answerDiv.style.display === "") {
+                answerDiv.style.display = "block";
+            } else {
+                answerDiv.style.display = "none";
+            }
+        }
+    </script>
+}

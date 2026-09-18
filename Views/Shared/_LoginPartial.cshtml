@@ -1,29 +1,27 @@
 ***REMOVED***@using Microsoft.AspNetCore.Identity
-@inject SignInManager<ApplicationUser> SignInManager
-@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
 
-<ul class="navbar-nav flex-row align-items-center gap-3 mb-0">
+<ul class="navbar-nav">
     @if (SignInManager.IsSignedIn(User))
     {
-        var currentUser = await UserManager.GetUserAsync(User);
-        var firstName = currentUser?.FullName?.Split(' ')[0] ?? User.Identity?.Name;
-
-        <li class="nav-item text-dark fw-medium">
-            Hi, @firstName
+        <li class="nav-item">
+            <span class="nav-link text-dark">Hello @User.Identity?.Name!</span>
         </li>
         <li class="nav-item">
-            <form class="form-inline m-0" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
-                <button type="submit" class="btn btn-sm btn-outline-danger">Logout</button>
+            <!-- Redirects to Home controller Index action upon logout -->
+            <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                <button type="submit" class="nav-link btn btn-link text-danger">Logout</button>
             </form>
         </li>
     }
     else
     {
         <li class="nav-item">
-            <a class="btn btn-sm btn-light text-dark" asp-controller="Account" asp-action="Register">Register</a>
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Register</a>
         </li>
         <li class="nav-item">
-            <a class="btn btn-sm btn-primary" asp-controller="Account" asp-action="Login">Login</a>
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a>
         </li>
     }
 </ul>

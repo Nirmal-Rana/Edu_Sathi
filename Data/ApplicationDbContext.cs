@@ -4,8 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EduSathi.Data
 {
-    // Pass ApplicationUser into IdentityDbContext here:
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext : IdentityDbContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)

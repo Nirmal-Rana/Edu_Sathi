@@ -2,36 +2,26 @@
     ViewData["Title"] = "Register";
 }
 
-<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
-    <div class="col-md-5">
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-md-4">
         <div class="card shadow-sm p-4">
-            <h3 class="text-center mb-4">Create EduSathi Account</h3>
+            <h3 class="text-center mb-4">Create a New Account</h3>
 
-            <form method="post" asp-controller="Account" asp-action="Register">
+            <form method="post" asp-area="Identity" asp-page="/Account/Register">
                 <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
                 <div class="form-floating mb-3">
-                    <input name="fullName" class="form-control" placeholder="Full Name" required />
-                    <label>Full Name</label>
+                    <input name="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                    <label>Email</label>
                 </div>
 
                 <div class="form-floating mb-3">
-                    <input name="contact" class="form-control" placeholder="Contact Number" required />
-                    <label>Contact Number</label>
-                </div>
-
-                <div class="form-floating mb-3">
-                    <input name="email" class="form-control" autocomplete="username" placeholder="name@example.com" required />
-                    <label>Email Address</label>
-                </div>
-
-                <div class="form-floating mb-3">
-                    <input name="password" type="password" class="form-control" autocomplete="new-password" placeholder="Password" required />
+                    <input name="Input.Password" type="password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="Password" />
                     <label>Password</label>
                 </div>
 
                 <div class="form-floating mb-3">
-                    <input name="confirmPassword" type="password" class="form-control" autocomplete="new-password" placeholder="Confirm Password" required />
+                    <input name="Input.ConfirmPassword" type="password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="Confirm Password" />
                     <label>Confirm Password</label>
                 </div>
 
