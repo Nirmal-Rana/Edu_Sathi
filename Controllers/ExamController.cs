@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using EduSathi.Data;
 using EduSathi.Models;
 using EduSathi.ViewModels;
+using EduSathi.Services;
+using UglyToad.PdfPig;
 
 namespace EduSathi.Controllers
 {
@@ -18,11 +20,13 @@ namespace EduSathi.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly GeminiService _geminiService;
 
-        public ExamController(ApplicationDbContext context, IWebHostEnvironment env)
+        public ExamController(ApplicationDbContext context, IWebHostEnvironment env, GeminiService geminiService)
         {
             _context = context;
             _env = env;
+            _geminiService = geminiService;
         }
 
         // GET: /Exam/Index (Dashboard for uploading or picking past PDFs)
@@ -56,8 +60,8 @@ namespace EduSathi.Controllers
             }
             else if (model.NewPdfFile != null && model.NewPdfFile.Length > 0)
             {
-                // User uploaded a new PDF file from device
-                string uploadsFolder = Path.Combine(_env.WebRootPath, "uploads");
+                // Saving to TempPath prevents Visual Studio Hot Reload from crashing the app during upload
+                string uploadsFolder = Path.Combine(Path.GetTempPath(), "EduSathiUploads");
                 Directory.CreateDirectory(uploadsFolder);
                 string uniqueFileName = Guid.NewGuid().ToString() + "_" + model.NewPdfFile.FileName;
                 string filePath = Path.Combine(uploadsFolder, uniqueFileName);
@@ -67,22 +71,40 @@ namespace EduSathi.Controllers
                     await model.NewPdfFile.CopyToAsync(fileStream);
                 }
 
-                // Temporary sample summary & questions (AI parsing service integration can go here next)
-                string sampleSummary = "This is an automated summary generated from your multi-page PDF text.";
+                string extractedText = "";
+                using (var pdf = PdfDocument.Open(filePath))
+                {
+                    foreach (var page in pdf.GetPages())
+                    {
+                        extractedText += page.Text + " ";
+                    }
+                }
+
+                if (extractedText.Length > 30000)
+                {
+                    extractedText = extractedText.Substring(0, 30000);
+                }
+
+                string aiSummary = await _geminiService.GenerateSummaryAsync(extractedText);
+
 
                 var newDoc = new UploadedDocument
                 {
                     UserId = userId ?? string.Empty,
                     FileName = model.NewPdfFile.FileName,
                     FilePath = filePath,
-                    Summary = sampleSummary,
+                    ExtractedText = extractedText,
+                    Summary = aiSummary,
                     UploadedAt = DateTime.UtcNow
                 };
 
-                // Add sample questions categorized by difficulty levels
-                newDoc.Questions.Add(new Question { QuestionText = "What is a basic concept covered in this document?", OptionA = "Option A", OptionB = "Option B", OptionC = "Option C", OptionD = "Option D", CorrectOption = "A", Level = QuestionLevel.Basic, Explanation = "Basic explanation." });
-                newDoc.Questions.Add(new Question { QuestionText = "How do you apply the medium-level concept here?", OptionA = "Option A", OptionB = "Option B", OptionC = "Option C", OptionD = "Option D", CorrectOption = "B", Level = QuestionLevel.Medium, Explanation = "Medium explanation." });
-                newDoc.Questions.Add(new Question { QuestionText = "What is the hard analytical conclusion?", OptionA = "Option A", OptionB = "Option B", OptionC = "Option C", OptionD = "Option D", CorrectOption = "C", Level = QuestionLevel.Hard, Explanation = "Hard explanation." });
+                var basicQuestions = await _geminiService.GenerateQuestionsAsync(extractedText, QuestionLevel.Basic, 2);
+                var mediumQuestions = await _geminiService.GenerateQuestionsAsync(extractedText, QuestionLevel.Medium, 2);
+                var hardQuestions = await _geminiService.GenerateQuestionsAsync(extractedText, QuestionLevel.Hard, 2);
+
+                foreach (var q in basicQuestions) newDoc.Questions.Add(q);
+                foreach (var q in mediumQuestions) newDoc.Questions.Add(q);
+                foreach (var q in hardQuestions) newDoc.Questions.Add(q);
 
                 _context.UploadedDocuments.Add(newDoc);
                 await _context.SaveChangesAsync();

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using EduSathi.Data;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Configure Entity Framework Core with SQL Server connection string
@@ -23,6 +24,7 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddHttpClient<EduSathi.Services.GeminiService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
