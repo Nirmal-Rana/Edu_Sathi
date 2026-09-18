@@ -1,0 +1,84 @@
+﻿@*
+    Views/Shared/_PublicLayout.cshtml — NEW FILE.
+
+    Converted from PublicSite.Master (Web Forms). Used by the three anonymous
+    pages: Home/Index, Account/Login, Account/Register.
+
+    Deliberately does NOT load bootstrap.min.css or ~/css/site.css. edusathi.css
+    sets its own dark background and base styles, and loading bootstrap alongside
+    it causes both to fight over html/body. Your existing _Layout.cshtml still
+    loads bootstrap, so Privacy/Error/anything else you add is unaffected.
+
+    Logout is not in this layout — it only appears once signed in, and by then the
+    user is on _DashboardLayout.
+*@
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(ViewData["Title"] ?? "EduSathi")</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <link rel="stylesheet" href="~/css/edusathi.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body class="public-body">
+
+    <header class="public-navbar">
+        <a class="public-logo" asp-controller="Home" asp-action="Index">
+            <div class="logo-badge"><i class="bi bi-mortarboard-fill"></i></div>
+            <div class="logo-text">EduSathi</div>
+        </a>
+
+        <nav class="public-nav-links" id="publicNavLinks">
+            <a asp-controller="Home" asp-action="Index" asp-fragment="home">Home</a>
+            <a asp-controller="Home" asp-action="Index" asp-fragment="features">Features</a>
+            <a asp-controller="Home" asp-action="Index" asp-fragment="how-it-works">How It Works</a>
+            <a asp-controller="Home" asp-action="Index" asp-fragment="about">About</a>
+        </nav>
+
+        <div class="public-nav-actions">
+            @if (SignInManager.IsSignedIn(User))
+            {
+                <a class="btn btn-primary" asp-controller="Exam" asp-action="Index">Go to Dashboard</a>
+            }
+            else
+            {
+                <a class="btn btn-outline" asp-controller="Account" asp-action="Login">Login</a>
+                <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Get Started</a>
+            }
+        </div>
+
+        <button type="button" class="public-nav-toggle" id="navToggle" aria-label="Toggle menu">
+            <i class="bi bi-list"></i>
+        </button>
+    </header>
+
+    <main class="public-main">
+        @RenderBody()
+    </main>
+
+    <footer class="public-footer">
+        <div class="public-footer-inner">
+            <div class="public-footer-brand">
+                <div class="logo-badge"><i class="bi bi-mortarboard-fill"></i></div>
+                <div>
+                    <div class="logo-text">EduSathi</div>
+                    <p>Turn your notes into smarter learning.</p>
+                </div>
+            </div>
+            <p class="public-footer-copy">&copy; @DateTime.Now.Year EduSathi. Built for the hackathon.</p>
+        </div>
+    </footer>
+
+    <script src="~/js/edusathi.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

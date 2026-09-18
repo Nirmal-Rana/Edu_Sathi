@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
@@ -13,6 +14,32 @@ using EduSathi.ViewModels;
 
 namespace EduSathi.Controllers
 {
+    // ============================================================================
+    // COMPLETE REPLACEMENT for Controllers/ExamController.cs.
+    //
+    // Index, ProcessSubmission and QuizSession are UNCHANGED — same signatures,
+    // same bodies, same behaviour, including the sample-summary and sample-question
+    // seeding. Diff this file against yours and you should see only additions.
+    //
+    // THREE ACTIONS ARE ADDED. All three are new routes; none of them alters an
+    // existing one:
+    //
+    //   History()          GET  /Exam/History
+    //       The migrated design has a document history page in the sidebar. The data
+    //       is the same query Index() already runs.
+    //
+    //   Quiz(id, level)    GET  /Exam/Quiz?id=..&level=Basic
+    //   Quiz(...)          POST /Exam/Quiz
+    //       QuizSession.cshtml listed questions but gave the user no way to answer
+    //       them — no radios, no submit, no scoring. The converted design is an
+    //       answerable quiz, so it needs somewhere to post to. Grading is done here
+    //       on the server, deliberately: the old Web Forms page graded in a postback
+    //       and correct answers never reached the browser before submission, and
+    //       keeping that property matters more than saving a round trip.
+    //
+    // Nothing here writes to the database. If you'd rather these live in their own
+    // controller, lift the three actions out — they only need _context.
+    // ============================================================================
     [Authorize]
     public class ExamController : Controller
     {
@@ -120,6 +147,76 @@ namespace EduSathi.Controllers
             };
 
             return View(viewModel);
+        }
+
+        // ====================== ADDED BELOW THIS LINE ======================
+
+        // GET: /Exam/History
+        // Same query as Index(), rendered as the document history list from the
+        // migrated design. Read-only.
+        public async Task<IActionResult> History()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userDocs = await _context.UploadedDocuments
+                .Include(d => d.Questions)
+                .Where(d => d.UserId == userId)
+                .OrderByDescending(d => d.UploadedAt)
+                .ToListAsync();
+
+            return View(userDocs);
+        }
+
+        // GET: /Exam/Quiz?id=5&level=Basic
+        public async Task<IActionResult> Quiz(int id, QuestionLevel level = QuestionLevel.Basic)
+        {
+            var vm = await BuildAttemptAsync(id, level);
+            if (vm == null) return NotFound();
+            return View(vm);
+        }
+
+        // POST: /Exam/Quiz
+        // `answers` binds from inputs named answers[<questionId>] with values "A".."D".
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [ActionName("Quiz")]
+        public async Task<IActionResult> QuizSubmit(int id, QuestionLevel level, Dictionary<int, string>? answers)
+        {
+            var vm = await BuildAttemptAsync(id, level);
+            if (vm == null) return NotFound();
+
+            vm.Answers = answers ?? new Dictionary<int, string>();
+            vm.IsSubmitted = true;
+            vm.CorrectCount = vm.Questions.Count(q =>
+                vm.Answers.TryGetValue(q.Id, out var picked) &&
+                string.Equals(picked, q.CorrectOption, StringComparison.OrdinalIgnoreCase));
+
+            // TODO(backend): nothing is saved. To persist scores, XP and streaks you'd
+            // need an attempt table (UserId, UploadedDocumentId, Level, Score, Total,
+            // CompletedAt) plus a migration. Profile/Index currently shows "—" for
+            // average score and streak for exactly this reason.
+
+            return View("Quiz", vm);
+        }
+
+        // Loads one document + one difficulty level, scoped to the signed-in user.
+        // Returns null when the document doesn't exist or belongs to someone else,
+        // which is the same ownership check QuizSession() does.
+        private async Task<QuizAttemptViewModel?> BuildAttemptAsync(int documentId, QuestionLevel level)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var document = await _context.UploadedDocuments
+                .Include(d => d.Questions)
+                .FirstOrDefaultAsync(d => d.Id == documentId && d.UserId == userId);
+
+            if (document == null) return null;
+
+            return new QuizAttemptViewModel
+            {
+                DocumentId = document.Id,
+                FileName = document.FileName,
+                Level = level,
+                Questions = document.Questions.Where(q => q.Level == level).ToList()
+            };
         }
     }
 }

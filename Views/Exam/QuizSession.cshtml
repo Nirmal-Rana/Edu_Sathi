@@ -1,62 +1,105 @@
-﻿@model EduSathi.ViewModels.QuizSessionViewModel
+﻿@*
+    Views/Exam/QuizSession.cshtml — COMPLETE REPLACEMENT.
+
+    Same @@model (QuizSessionViewModel) and same action — no controller change.
+
+    The bootstrap tab strip became the Summary + difficulty-row design from
+    Summary.aspx and Practice.aspx. The reason is behavioural, not cosmetic: the
+    old tabs printed the questions and their options straight onto the page with
+    no way to answer them, and the Medium and Hard tabs dropped the options
+    entirely ("omitted for brevity"). Each difficulty now links to /Exam/Quiz,
+    which renders answerable questions and grades them.
+
+    Model.Summary is whatever ProcessSubmission stored. Right now that's the
+    hard-coded sampleSummary string; when the Gemini pipeline fills it in, this
+    page shows the real thing with no edit here.
+*@
+@model EduSathi.ViewModels.QuizSessionViewModel
 
 @{
-    ViewData["Title"] = "Quiz Session - " + Model.FileName;
+    ViewData["Title"] = "Study - " + Model.FileName;
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+
+    var levels = new[]
+    {
+        (Level: EduSathi.Models.QuestionLevel.Basic,  Title: "Basic",  Desc: "Recall definitions and core facts.",   Icon: "bi-leaf-fill",             Colour: "green",  Count: Model.BasicQuestions.Count),
+        (Level: EduSathi.Models.QuestionLevel.Medium, Title: "Medium", Desc: "Apply concepts and connect ideas.",    Icon: "bi-lightning-charge-fill", Colour: "orange", Count: Model.MediumQuestions.Count),
+        (Level: EduSathi.Models.QuestionLevel.Hard,   Title: "Hard",   Desc: "Analyse, evaluate and reason deeply.", Icon: "bi-fire",                  Colour: "orange", Count: Model.HardQuestions.Count)
+    };
 }
 
-<div class="container mt-4">
-    <h2>Study Session: @Model.FileName</h2>
+<div class="page-header">
+    <div>
+        <h1>Summary</h1>
+        <p class="subtitle">@Model.FileName</p>
+    </div>
+    <a class="btn-back" asp-action="History"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
 
-    <!-- Summary Section -->
-    <div class="card my-4 p-3 shadow-sm bg-light">
-        <h4>PDF Summary</h4>
-        <p class="lead fs-6">@Model.Summary</p>
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <span class="badge-pill" style="background:var(--primary-soft-bg);color:var(--primary);border-color:transparent;">
+            <i class="bi bi-stars"></i> AI Summary
+        </span>
+        <span style="font-size:12.5px;color:var(--text-muted);">
+            <i class="bi bi-question-circle"></i>
+            @(Model.BasicQuestions.Count + Model.MediumQuestions.Count + Model.HardQuestions.Count) questions
+        </span>
     </div>
 
-    <!-- Quiz Sections By Level -->
-    <ul class="nav nav-tabs" id="quizTab" role="tablist">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#basic" type="button">Basic Level</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#medium" type="button">Medium Level</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#hard" type="button">Hard Level</button></li>
-    </ul>
+    <h3>Overview</h3>
+    @if (string.IsNullOrWhiteSpace(Model.Summary))
+    {
+        <p class="desc">No summary has been generated for this document yet.</p>
+    }
+    else
+    {
+        @* The summary is stored as one block of text. Split on blank lines so a
+           multi-paragraph response from the AI renders as separate bullets. *@
+        var points = Model.Summary
+            .Split(new[] { "\r\n\r\n", "\n\n", "\r\n-", "\n-" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Trim().TrimStart('-', '•', ' '))
+            .Where(p => p.Length > 0)
+            .ToList();
 
-    <div class="tab-content border border-top-0 p-4 bg-white shadow-sm" id="quizTabContent">
-        <!-- Basic Tab -->
-        <div class="tab-pane fade show active" id="basic">
-            <h4>Basic Questions</h4>
-            @foreach (var q in Model.BasicQuestions)
+        <ul class="summary-bullets">
+            @foreach (var point in points)
             {
-                <div class="mb-3 p-3 border rounded">
-                    <p><strong>@q.QuestionText</strong></p>
-                    <ul class="list-unstyled">
-                        <li>A) @q.OptionA</li>
-                        <li>B) @q.OptionB</li>
-                        <li>C) @q.OptionC</li>
-                        <li>D) @q.OptionD</li>
-                    </ul>
-                </div>
+                <li>@point</li>
             }
-        </div>
-        <!-- Medium Tab -->
-        <div class="tab-pane fade" id="medium">
-            <h4>Medium Questions</h4>
-            @foreach (var q in Model.MediumQuestions)
-            {
-                <div class="mb-3 p-3 border rounded">
-                    <p><strong>@q.QuestionText</strong></p>
-                    <!-- Options listing omitted for brevity -->
-                </div>
-            }
-        </div>
-        <!-- Hard Tab -->
-        <div class="tab-pane fade" id="hard">
-            <h4>Hard Questions</h4>
-            @foreach (var q in Model.HardQuestions)
-            {
-                <div class="mb-3 p-3 border rounded">
-                    <p><strong>@q.QuestionText</strong></p>
-                </div>
-            }
-        </div>
+        </ul>
+    }
+</div>
+
+<div class="page-header" style="margin-top:28px;">
+    <div>
+        <h1 style="font-size:20px;">Practice Questions</h1>
+        <p class="subtitle">Pick a difficulty to start answering.</p>
     </div>
 </div>
+
+@foreach (var l in levels)
+{
+    if (l.Count == 0)
+    {
+        <div class="difficulty-row" style="opacity:.55;cursor:default;">
+            <div class="icon-circle @l.Colour"><i class="bi @l.Icon"></i></div>
+            <div class="info">
+                <div class="title">@l.Title</div>
+                <div class="desc">No questions at this level yet.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <a class="difficulty-row" asp-action="Quiz" asp-route-id="@Model.DocumentId" asp-route-level="@l.Level">
+            <div class="icon-circle @l.Colour"><i class="bi @l.Icon"></i></div>
+            <div class="info">
+                <div class="title">@l.Title</div>
+                <div class="desc">@l.Desc</div>
+            </div>
+            <span class="meta-right">@l.Count question@(l.Count == 1 ? "" : "s")</span>
+            <i class="bi bi-chevron-right" style="color:#C7CCDA;"></i>
+        </a>
+    }
+}
