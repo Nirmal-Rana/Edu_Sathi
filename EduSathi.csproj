@@ -7,10 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Views\Questionaries\**" />
     <Compile Remove="Views\Questionnairesview\**" />
+    <Content Remove="Views\Questionaries\**" />
     <Content Remove="Views\Questionnairesview\**" />
+    <EmbeddedResource Remove="Views\Questionaries\**" />
     <EmbeddedResource Remove="Views\Questionnairesview\**" />
+    <None Remove="Views\Questionaries\**" />
     <None Remove="Views\Questionnairesview\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controllers\QuestionariesController.cs" />
   </ItemGroup>
 
   <ItemGroup>

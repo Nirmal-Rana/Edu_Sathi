@@ -1,28 +1,4 @@
-﻿@*
-    Views/Shared/_DashboardLayout.cshtml — COMPLETE REPLACEMENT.
-
-    This replaces the bootstrap sidebar shell with the EduSathi sidebar from
-    Site.Master. Everything functional in the original file is preserved:
-
-      - @inject SignInManager / UserManager               -> kept
-      - "Hi, {firstName}" greeting from ApplicationUser    -> kept (now the sidebar footer)
-      - Identity-area logout form with returnUrl           -> kept, byte-for-byte route values
-      - jquery + bootstrap.bundle + site.js script tags    -> REMOVED, see note below
-      - RenderSectionAsync("Scripts")                      -> kept
-
-    Removed scripts: this layout no longer loads bootstrap.min.css,
-    bootstrap.bundle.min.js, jquery or ~/css/site.css. None of the migrated views
-    use a bootstrap component, and loading bootstrap's reboot alongside
-    edusathi.css makes both fight over html/body backgrounds.
-
-    IF YOU ADD A PAGE THAT NEEDS JQUERY VALIDATION: add it per-page via
-    @section Scripts { <partial name="_ValidationScriptsPartial" /> } and pull
-    jquery in there, or add the two script tags back here.
-
-    The inline <style> block from the original is gone — those rules are now in
-    wwwroot/css/edusathi.css under .sidebar / .app-shell / .nav-item.
-*@
-@using Microsoft.AspNetCore.Identity
+﻿@using Microsoft.AspNetCore.Identity
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
@@ -47,10 +23,7 @@
         initials += char.ToUpperInvariant(part[0]);
     }
     if (initials.Length == 0) { initials = "?"; }
-}
-<!DOCTYPE html>
-<html lang="en">
-<head>
+}<!DOCTYPE html><html lang="en"><head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - EduSathi</title>
@@ -60,9 +33,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <link rel="stylesheet" href="~/css/edusathi.css" asp-append-version="true" />
-    @await RenderSectionAsync("Head", required: false)
-</head>
-<body>
+    @await RenderSectionAsync("Head", required: false)</head><body>
     <div class="app-shell">
 
         <aside class="sidebar">
@@ -81,7 +52,8 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Profile" ? "active" : "")" asp-controller="Questionaries" asp-action="Profile">
+                    <!-- Ensure controller matches your actual class name (Questionnaires vs Questionaries) -->
+                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Profile" ? "active" : "")" asp-controller="Questionnaires" asp-action="Profile">
                         <i class="bi bi-person-badge"></i> Profile
                     </a>
                 </li>
@@ -92,7 +64,7 @@
                     </a>
                 </li>
                 <li class="nav-item mb-2">
-                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "RoomInvites" ? "active" : "")" asp-controller="Questionaries" asp-action="RoomInvites">
+                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "RoomInvites" ? "active" : "")" asp-controller="Questionnaires" asp-action="RoomInvites">
                         <i class="bi bi-bell-fill text-warning me-2"></i> Room Invites
                     </a>
                 </li>
@@ -136,6 +108,4 @@
     </div>
 
     <script src="~/js/edusathi.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
-</body>
-</html>
+    @await RenderSectionAsync("Scripts", required: false)</body></html>

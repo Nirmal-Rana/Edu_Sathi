@@ -517,5 +517,20 @@ namespace EduSathi.Controllers
 
             return View(user);
         }
+
+        // GET: /Questionnaires/RoomInvites
+        // GET: /Questionnaires/RoomInvites
+        public async Task<IActionResult> RoomInvites()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var myRooms = await _context.CustomRooms
+                .Include(r => r.Participants)
+                .Where(r => r.IsActive && r.Participants.Any(p => p.UserId == userId && !p.HasSubmitted))
+                .OrderByDescending(r => r.Id)
+                .ToListAsync();
+
+            return View(myRooms);
+        }
     }
 }
