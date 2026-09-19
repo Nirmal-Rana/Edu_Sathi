@@ -3,9 +3,10 @@
 @{
     ViewData["Title"] = "Create Custom Questionary";
     Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+    var friends = ViewBag.Friends as List<EduSathi.Models.ApplicationUser>;
 }
 
-<div class="container mt-4">
+<div class="container mt-4 mb-5">
     <h2 class="fw-bold mb-3">Create Custom Quiz Room</h2>
     <p class="text-muted">Upload one or more PDFs or pick from your saved files, choose your question count, select your category, and generate your room.</p>
     <hr />
@@ -37,7 +38,7 @@
 
         <hr class="text-muted my-3" />
 
-        <!-- Number of Questions Input (NEW) -->
+        <!-- Number of Questions Input -->
         <div class="mb-4">
             <label class="form-label fw-bold">Number of Questions to Generate</label>
             <input type="number" name="questionCount" class="form-control" value="5" min="1" max="25" required />
@@ -68,8 +69,54 @@
             </div>
         </div>
 
+        <!-- Friend Invite Section (Only visible for Global Rooms) -->
+        <div class="mb-4" id="friendInviteSection" style="display: none;">
+            <label class="form-label fw-bold text-success"><i class="bi bi-people-fill"></i> Invite Friends Directly</label>
+            @if (friends != null && friends.Any())
+            {
+                <div class="card p-3 bg-light border">
+                    <div class="small text-muted mb-2">Select friends to automatically add them as participants to your room:</div>
+                    @foreach (var friend in friends)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="invitedFriendIds" value="@friend.Id" id="friend_@friend.Id">
+                            <label class="form-check-label" for="friend_@friend.Id">
+                                @friend.UserName <span class="text-muted">(@friend.Email)</span>
+                            </label>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info py-2 small mb-0">You don't have any friends added yet. Visit the Friends menu to connect with study buddies!</div>
+            }
+        </div>
+
         <button type="submit" class="btn btn-primary btn-lg mt-2 w-100">
             <i class="bi bi-cpu-fill"></i> Generate Questions & Launch Room
         </button>
     </form>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const catSolo = document.getElementById("catSolo");
+            const catGlobal = document.getElementById("catGlobal");
+            const friendSection = document.getElementById("friendInviteSection");
+
+            function updateVisibility() {
+                if (catGlobal.checked) {
+                    friendSection.style.display = "block";
+                } else {
+                    friendSection.style.display = "none";
+                }
+            }
+
+            catSolo.addEventListener("change", updateVisibility);
+            catGlobal.addEventListener("change", updateVisibility);
+            updateVisibility();
+        });
+    </script>
+}

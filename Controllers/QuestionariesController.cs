@@ -45,10 +45,30 @@ namespace EduSathi.Controllers
             return View(user);
         }
 
-        // GET: /Questionaries/Index
-        public IActionResult Index()
+        // GET: /Questionaries/Index (Questionaries Hub / Document Management)
+        public async Task<IActionResult> Index()
         {
-            return View();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userDocs = await _context.UploadedDocuments
+                .Where(d => d.UserId == userId)
+                .OrderByDescending(d => d.UploadedAt)
+                .ToListAsync();
+
+            return View(userDocs);
+        }
+
+        // GET: /Questionaries/RoomInvites (Dedicated page for invited/active live rooms)
+        public async Task<IActionResult> RoomInvites()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var myRooms = await _context.CustomRooms
+                .Include(r => r.Participants)
+                .Where(r => r.IsActive && r.Participants.Any(p => p.UserId == userId && !p.HasSubmitted))
+                .OrderByDescending(r => r.Id)
+                .ToListAsync();
+
+            return View(myRooms);
         }
 
         // GET: /Questionaries/CreateCustom
@@ -60,13 +80,21 @@ namespace EduSathi.Controllers
                 .OrderByDescending(d => d.UploadedAt)
                 .ToListAsync();
 
+            var friends = await _context.Friendships
+                .Where(f => f.UserId == userId && f.IsAccepted)
+                .Include(f => f.Friend)
+                .Select(f => f.Friend)
+                .ToListAsync();
+
+            ViewBag.Friends = friends;
+
             return View(userDocs);
         }
 
         // POST: /Questionaries/CreateCustom
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateCustom(List<IFormFile>? newPdfFiles, List<int>? selectedDocumentIds, int questionCount, string category, string roomName)
+        public async Task<IActionResult> CreateCustom(List<IFormFile>? newPdfFiles, List<int>? selectedDocumentIds, int questionCount, string category, string roomName, List<string>? invitedFriendIds)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var user = await _context.Users.FindAsync(userId);
@@ -74,7 +102,6 @@ namespace EduSathi.Controllers
             string combinedExtractedText = "";
             UploadedDocument? primaryDoc = null;
 
-            // 1. Handle newly uploaded files
             if (newPdfFiles != null && newPdfFiles.Count > 0)
             {
                 string uploadsFolder = Path.Combine(_env.WebRootPath ?? Path.GetTempPath(), "uploads");
@@ -92,7 +119,6 @@ namespace EduSathi.Controllers
                             await file.CopyToAsync(fileStream);
                         }
 
-                        // Extract text using PdfPig
                         string fileText = "";
                         using (var pdf = PdfDocument.Open(filePath))
                         {
@@ -115,13 +141,12 @@ namespace EduSathi.Controllers
                         };
 
                         _context.UploadedDocuments.Add(newDoc);
-                        primaryDoc = newDoc; // Track for question mapping if needed
+                        primaryDoc = newDoc;
                     }
                 }
                 await _context.SaveChangesAsync();
             }
 
-            // 2. Include text from previously selected files if any
             if (selectedDocumentIds != null && selectedDocumentIds.Count > 0)
             {
                 var selectedDocs = await _context.UploadedDocuments
@@ -135,19 +160,16 @@ namespace EduSathi.Controllers
                 }
             }
 
-            // Safety check for text limits
             if (combinedExtractedText.Length > 25000)
             {
                 combinedExtractedText = combinedExtractedText.Substring(0, 25000);
             }
 
-            // Fallback if no text found
             if (string.IsNullOrWhiteSpace(combinedExtractedText))
             {
                 combinedExtractedText = "General academic practice material.";
             }
 
-            // 3. Generate dynamic MCQs using Gemini service based on requested question count
             if (primaryDoc != null)
             {
                 string aiResponse = await _mcqService.GenerateMcqsAsync(combinedExtractedText, questionCount);
@@ -181,11 +203,10 @@ namespace EduSathi.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            // 4. Route based on category choice (using case-insensitive comparison)
             if (string.Equals(category, "Solo", StringComparison.OrdinalIgnoreCase))
             {
                 int docId = primaryDoc != null ? primaryDoc.Id : 0;
-                return RedirectToAction("QuizSession", "Quiz", new { id = docId });
+                return RedirectToAction("Session", "Quiz", new { id = docId });
             }
             else if (string.Equals(category, "Global", StringComparison.OrdinalIgnoreCase))
             {
@@ -203,6 +224,22 @@ namespace EduSathi.Controllers
                     UserId = userId ?? "",
                     UserName = user?.UserName ?? "Host"
                 });
+
+                if (invitedFriendIds != null && invitedFriendIds.Any())
+                {
+                    foreach (var friendId in invitedFriendIds)
+                    {
+                        var friendUser = await _context.Users.FindAsync(friendId);
+                        if (friendUser != null)
+                        {
+                            room.Participants.Add(new RoomParticipant
+                            {
+                                UserId = friendUser.Id,
+                                UserName = friendUser.UserName ?? "Participant"
+                            });
+                        }
+                    }
+                }
 
                 _context.CustomRooms.Add(room);
                 await _context.SaveChangesAsync();
@@ -280,13 +317,80 @@ namespace EduSathi.Controllers
         // GET: /Questionaries/RoomLobby/{roomCode}
         public async Task<IActionResult> RoomLobby(string roomCode)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             var room = await _context.CustomRooms
                 .Include(r => r.Participants)
                 .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
 
             if (room == null) return NotFound();
 
+            var friends = await _context.Friendships
+                .Include(f => f.User)
+                .Include(f => f.Friend)
+                .Where(f => f.IsAccepted && (f.UserId == userId || f.FriendId == userId))
+                .Select(f => f.UserId == userId ? f.Friend : f.User)
+                .ToListAsync();
+
+            ViewBag.Friends = friends;
+
             return View(room);
+        }
+
+        // GET: /Questionaries/CheckQuizStatus?roomCode={roomCode}
+        [HttpGet]
+        public async Task<IActionResult> CheckQuizStatus(string roomCode)
+        {
+            var room = await _context.CustomRooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+            if (room == null) return NotFound();
+            return Json(new { isStarted = room.IsQuizStarted });
+        }
+
+        // POST: /Questionaries/TriggerStartQuiz
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TriggerStartQuiz(string roomCode)
+        {
+            var room = await _context.CustomRooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+            if (room != null)
+            {
+                room.IsQuizStarted = true;
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction("LiveQuiz", new { roomCode });
+        }
+
+        // POST: /Questionaries/InviteFriendToRoom
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InviteFriendToRoom(string roomCode, string friendId)
+        {
+            var room = await _context.CustomRooms
+                .Include(r => r.Participants)
+                .FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+
+            if (room != null)
+            {
+                bool alreadyJoined = room.Participants.Any(p => p.UserId == friendId);
+                if (!alreadyJoined)
+                {
+                    var friendUser = await _context.Users.FindAsync(friendId);
+                    room.Participants.Add(new RoomParticipant
+                    {
+                        CustomRoomId = room.Id,
+                        UserId = friendId,
+                        UserName = friendUser?.UserName ?? "Participant"
+                    });
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = "Friend added to the room successfully!";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "This friend is already in the room.";
+                }
+            }
+
+            return RedirectToAction("RoomLobby", new { roomCode });
         }
 
         // GET: /Questionaries/LiveQuiz/{roomCode}

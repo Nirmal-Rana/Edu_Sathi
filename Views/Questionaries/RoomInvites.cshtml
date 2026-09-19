@@ -1,0 +1,40 @@
+﻿@model List<EduSathi.Models.CustomRoom>
+
+@{
+    ViewData["Title"] = "Room Invitations";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-sm p-4 border-0 bg-white">
+        <h3 class="fw-bold text-primary mb-3">
+            <i class="bi bi-envelope-open me-2"></i> Your Room Invitations
+        </h3>
+        <p class="text-muted">Live quiz sessions you have been invited to by your peers.</p>
+        <hr />
+
+        @if (Model == null || !Model.Any())
+        {
+            <div class="text-center py-5">
+                <p class="text-muted">You have no pending room invitations or active quizzes right now.</p>
+            </div>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var room in Model)
+                {
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3 mb-2 shadow-sm rounded border">
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark">@room.RoomName</h5>
+                            <small class="text-muted">Room Code: <span class="fw-bold text-primary">@room.RoomCode</span></small>
+                        </div>
+                        <a asp-action="RoomLobby" asp-route-roomCode="@room.RoomCode" class="btn btn-primary btn-sm px-3">
+                            Enter Lobby <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

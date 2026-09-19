@@ -1,8 +1,12 @@
 ﻿@model EduSathi.Models.CustomRoom
+@using System.Security.Claims
 
 @{
     ViewData["Title"] = "Room Lobby";
     Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    bool isCreator = Model.CreatorId == currentUserId;
 }
 
 <div class="container mt-4">
@@ -17,7 +21,33 @@
 
         <hr class="my-4" />
 
-        <h4 class="fw-bold text-start mb-3">Joined Participants</h4>
+        <!-- Alert Notifications -->
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show text-start" role="alert">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show text-start" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <!-- Section Header with Conditional Invite Button (Host Only) -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold text-start mb-0">Joined Participants</h4>
+            @if (isCreator)
+            {
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#inviteFriendsModal">
+                    <i class="bi bi-person-plus-fill me-1"></i> Invite Friends
+                </button>
+            }
+        </div>
+
         <ul class="list-group text-start mb-4">
             @foreach (var participant in Model.Participants)
             {
@@ -28,9 +58,112 @@
             }
         </ul>
 
+        <!-- Conditional Action Buttons -->
         <div class="d-flex justify-content-center gap-3">
-            <a asp-action="Index" class="btn btn-outline-secondary px-4">Back to Hub</a>
-            <a asp-action="LiveQuiz" asp-route-roomCode="@Model.RoomCode" class="btn btn-success px-4">Start Live Quiz</a>
+            <a asp-action="RoomInvites" class="btn btn-outline-secondary px-4">Back to Rooms</a>
+
+            @if (isCreator)
+            {
+                <form asp-action="TriggerStartQuiz" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="roomCode" value="@Model.RoomCode" />
+                    <button type="submit" class="btn btn-success px-4">Start Live Quiz</button>
+                </form>
+            }
+            else
+            {
+                <div class="alert alert-info py-2 px-3 mb-0 d-inline-flex align-items-center">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <small>Waiting for the host to start the quiz...</small>
+                </div>
+            }
         </div>
     </div>
 </div>
+
+<!-- Invite Friends Modal (Only rendered/used if creator) -->
+@if (isCreator)
+{
+    <div class="modal fade" id="inviteFriendsModal" tabindex="-1" aria-labelledby="inviteFriendsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="inviteFriendsModalLabel">Add Friends to Room</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start">
+                    @{
+                        var friends = ViewBag.Friends as List<EduSathi.Models.ApplicationUser>;
+                    }
+
+                    @if (friends == null || !friends.Any())
+                    {
+                        <p class="text-muted text-center py-3">You don't have any accepted friends to invite yet.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group">
+                            @foreach (var friend in friends)
+                            {
+                                bool isAlreadyInRoom = Model.Participants.Any(p => p.UserId == friend.Id);
+
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 fw-bold">@(friend.FullName ?? friend.UserName)</h6>
+                                        <small class="text-muted">@friend.Email</small>
+                                    </div>
+                                    <div>
+                                        @if (isAlreadyInRoom)
+                                        {
+                                            <span class="badge bg-success">Already in Room</span>
+                                        }
+                                        else
+                                        {
+                                            <form asp-action="InviteFriendToRoom" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="roomCode" value="@Model.RoomCode" />
+                                                <input type="hidden" name="friendId" value="@friend.Id" />
+                                                <button type="submit" class="btn btn-sm btn-primary">Add</button>
+                                            </form>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (!isCreator)
+    {
+        <script>
+            // Automatically poll status for participants to redirect when quiz starts
+            setInterval(function() {
+                fetch('@Url.Action("RoomLobby", "Questionaries", new { roomCode = Model.RoomCode })')
+                    .then(response => response.text())
+                    .then(html => {
+                        // Create a temporary DOM parser to check if the quiz has started status or redirect URL
+                        // Alternatively, you can create a tiny API endpoint checking room status.
+                    });
+            }, 3000);
+
+            // A cleaner approach if you add a simple JSON endpoint or check via SignalR/Fetch:
+            setInterval(function() {
+                fetch('/Questionaries/CheckQuizStatus?roomCode=@Model.RoomCode')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.isStarted) {
+                            window.location.href = '@Url.Action("LiveQuiz", "Questionaries", new { roomCode = Model.RoomCode })';
+                        }
+                    }).catch(err => console.error(err));
+            }, 2500);
+        </script>
+    }
+}

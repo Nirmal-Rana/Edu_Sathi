@@ -72,13 +72,24 @@
             <!-- Sidebar Links with Dynamic Active Highlighting -->
             <ul class="nav flex-column">
                 <li class="nav-item">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Exam" ? "active" : "")" asp-controller="Exam" asp-action="Index">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Profile" ? "active" : "")" asp-controller="Questionaries" asp-action="Profile">
                         <i class="bi bi-person-badge"></i> Profile
                     </a>
                 </li>
+
                 <li class="nav-item">
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Summary" ? "active" : "")" asp-controller="Exam" asp-action="Index">
-                        <i class="bi bi-speedometer2"></i> Dashboard
+                    <a class="nav-link @(Context.Request.Path.StartsWithSegments("/Friends") ? "active" : "")" asp-controller="Friends" asp-action="Index">
+                        <i class="bi bi-people-fill me-2"></i> Friends
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "RoomInvites" ? "active" : "")" asp-controller="Questionaries" asp-action="RoomInvites">
+                        <i class="bi bi-bell-fill text-warning me-2"></i> Room Invites
                     </a>
                 </li>
                 <li class="nav-item">
