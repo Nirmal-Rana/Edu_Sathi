@@ -1,0 +1,135 @@
+﻿@model FriendsViewModel
+@using System.Security.Claims
+@{
+   
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = "Manage Friends";
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+}
+
+<div class="container my-4">
+    <h2>Your Friends & Study Buddies</h2>
+
+    <!-- Alert Notifications -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Add New Friend Form -->
+    <div class="card p-3 my-3 shadow-sm border-0 bg-light">
+        <h5 class="text-primary mb-3">Add New Friend</h5>
+        <form asp-action="SendRequest" method="post" class="row g-3">
+            <div class="col-md-8">
+                <input type="email" name="friendEmail" class="form-control" placeholder="Enter friend's Gmail address..." required />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">Send Friend Request</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Pending Friend Requests Received -->
+    <div class="my-4">
+        <h4 class="mb-3">Pending Friend Requests (@Model.ReceivedRequests.Count)</h4>
+        @if (!Model.ReceivedRequests.Any())
+        {
+            <p class="text-muted">No pending requests received.</p>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var req in Model.ReceivedRequests)
+                {
+                    <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm mb-2 rounded">
+                        <div>
+                            <h6 class="mb-0 fw-bold">@req.User?.FullName</h6>
+                            <small class="text-muted">@req.User?.Email</small>
+                        </div>
+                        <div>
+                            <form asp-action="AcceptRequest" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@req.Id" />
+                                <button type="submit" class="btn btn-success btn-sm me-2">Accept</button>
+                            </form>
+                            <form asp-action="RejectRequest" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@req.Id" />
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Reject</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Sent Friend Requests (Pending) -->
+    <div class="my-4">
+        <h4 class="mb-3">Sent Requests Pending Response (@Model.SentRequests.Count)</h4>
+        @if (!Model.SentRequests.Any())
+        {
+            <p class="text-muted">You have no pending sent requests.</p>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var req in Model.SentRequests)
+                {
+                    <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm mb-2 rounded bg-light">
+                        <div>
+                            <h6 class="mb-0 fw-bold">@req.Friend?.FullName</h6>
+                            <small class="text-muted">@req.Friend?.Email (Waiting for response)</small>
+                        </div>
+                        <div>
+                            <form asp-action="RejectRequest" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@req.Id" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Cancel Request</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- My Friends List -->
+    <div class="my-4">
+        <h4 class="mb-3">My Friends List</h4>
+        @if (!Model.Friends.Any())
+        {
+            <p class="text-muted">You haven't added any friends yet.</p>
+        }
+        else
+        {
+            <div class="row">
+                @foreach (var friendship in Model.Friends)
+                {
+                    // Determine which user object is the actual friend (not the current logged-in user)
+                    var friendUser = friendship.UserId == currentUserId ? friendship.Friend : friendship.User;
+                    <div class="col-md-4 mb-3">
+                        <div class="card p-3 shadow-sm border-0">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px; font-weight: bold;">
+                                    @friendUser?.Email?.Substring(0, 1).ToUpper()
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">@friendUser?.FullName</h6>
+                                    <small class="text-muted">@friendUser?.Email</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

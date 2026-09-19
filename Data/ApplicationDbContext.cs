@@ -25,18 +25,25 @@ namespace EduSathi.Data
         public DbSet<CustomRoom> CustomRooms { get; set; }
         public DbSet<RoomParticipant> RoomParticipants { get; set; }
         public DbSet<QuizHistory> QuizHistories { get; set; }
+        public DbSet<Friendship> Friendships { get; set; } = null!;
 
-        protected override void OnModelCreating(ModelBuilder builder)
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(builder);
+            base.OnModelCreating(modelBuilder);
 
-            // A room's shareable code only needs to be unique while it matters (i.e.
-            // among Global rooms with a non-empty code); a filtered unique index lets
-            // every Solo room keep Code = "" without colliding.
-            builder.Entity<QuizRoom>()
-                .HasIndex(r => r.Code)
-                .IsUnique()
-                .HasFilter("[Code] <> ''");
+            // Fix for multiple cascade delete paths on Friendships table
+            modelBuilder.Entity<Friendship>()
+                .HasOne(f => f.User)
+                .WithMany()
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Friendship>()
+                .HasOne(f => f.Friend)
+                .WithMany()
+                .HasForeignKey(f => f.FriendId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

@@ -12,7 +12,9 @@ namespace EduSathi.Models
         public string CreatorId { get; set; } = string.Empty;
         public string RoomName { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
+        public bool IsQuizStarted { get; set; } = false; // Added to track when host starts the quiz
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsAccepted { get; set; } = false;
 
         public List<RoomParticipant> Participants { get; set; } = new();
     }
