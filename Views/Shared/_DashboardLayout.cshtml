@@ -35,7 +35,7 @@
     var isHome = controller == "exam" && action == "index";
     var isHistory = controller == "exam" && action == "history";
     var isQuestionnaires = controller == "questionnaires" && action != "myquizzes";
-    var isMyQuizzes = controller == "questionnaires" && action == "myquizzes";
+    var isFriends = controller == "friends";
     var isProfile = controller == "profile";
 
     string displayName = User.Identity?.Name ?? "";
@@ -97,8 +97,8 @@
                     </a>
                 </li>
                 <li>
-                    <a class="nav-item @(isMyQuizzes ? "active" : "")" asp-controller="Questionnaires" asp-action="MyQuizzes">
-                        <i class="bi bi-trophy-fill"></i><span>My Quizzes</span>
+                    <a class="nav-item @(isFriends ? "active" : "")" asp-controller="Friends" asp-action="Index">
+                        <i class="bi bi-people-fill"></i><span>Friends</span>
                     </a>
                 </li>
                 <li>

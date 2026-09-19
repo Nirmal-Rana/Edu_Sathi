@@ -19,7 +19,14 @@ namespace EduSathi.ViewModels
 
         public RoomCategory Category { get; set; } = RoomCategory.Solo;
 
+        // "Number of Questions to Generate" - clamped server-side to 1..30.
+        public int QuestionCount { get; set; } = 5;
+
+        // Checked friends (Global rooms only) get added as participants immediately,
+        // without needing the room code.
+        public List<string> InviteFriendUserIds { get; set; } = new List<string>();
         public List<UploadedDocument> PreviousDocuments { get; set; } = new List<UploadedDocument>();
+        public List<FriendSummary> Friends { get; set; } = new List<FriendSummary>();
     }
 
     /// <summary>Backs Views/Questionnaires/RoomLobby.cshtml.</summary>

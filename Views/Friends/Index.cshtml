@@ -1,0 +1,115 @@
+﻿@*
+    Views/Friends/Index.cshtml — NEW FILE.
+    Format inspiration only (Add Friend / Pending / Sent / My Friends List
+    sections) - visuals are EduSathi's own dark cards, not the reference app's.
+*@
+@using EduSathi.Models
+@model EduSathi.ViewModels.FriendsIndexViewModel
+
+@{
+    ViewData["Title"] = "Friends";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Your Friends &amp; Study Buddies</h1>
+        <p class="subtitle">Add friends by email, then invite them straight into your quiz rooms.</p>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom:12px;">Add New Friend</h3>
+    @if (TempData["FriendError"] != null)
+    {
+        <div class="field-errors" style="margin-bottom:12px;">@TempData["FriendError"]</div>
+    }
+    <form asp-action="SendRequest" method="post" style="display:flex;gap:8px;">
+        <input type="email" name="email" class="auth-input" placeholder="Enter friend's Gmail address..." style="margin-bottom:0;" />
+        <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Send Friend Request</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom:14px;">Pending Friend Requests <span style="color:var(--text-muted);font-weight:500;">(@Model.ReceivedPending.Count)</span></h3>
+    @if (!Model.ReceivedPending.Any())
+    {
+        <p class="desc">No pending requests received.</p>
+    }
+    else
+    {
+        foreach (var r in Model.ReceivedPending)
+        {
+            var name = string.IsNullOrWhiteSpace(r.Requester.FullName) ? r.Requester.Email : r.Requester.FullName;
+            <div class="list-item" style="margin-bottom:10px;">
+                <div class="icon-circle purple"><i class="bi bi-person-fill"></i></div>
+                <div class="info">
+                    <div class="title">@name</div>
+                    <div class="meta">@r.Requester.Email</div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <form asp-action="Accept" method="post"><input type="hidden" name="id" value="@r.Id" /><button type="submit" class="chip-btn green">Accept</button></form>
+                    <form asp-action="Decline" method="post"><input type="hidden" name="id" value="@r.Id" /><button type="submit" class="chip-btn orange">Decline</button></form>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom:14px;">Sent Requests Pending Response <span style="color:var(--text-muted);font-weight:500;">(@Model.SentPending.Count)</span></h3>
+    @if (!Model.SentPending.Any())
+    {
+        <p class="desc">You have no pending sent requests.</p>
+    }
+    else
+    {
+        foreach (var r in Model.SentPending)
+        {
+            var name = string.IsNullOrWhiteSpace(r.Addressee.FullName) ? r.Addressee.Email : r.Addressee.FullName;
+            <div class="list-item" style="margin-bottom:10px;">
+                <div class="icon-circle blue"><i class="bi bi-person-fill"></i></div>
+                <div class="info">
+                    <div class="title">@name</div>
+                    <div class="meta">@r.Addressee.Email</div>
+                </div>
+                <form asp-action="Cancel" method="post"><input type="hidden" name="id" value="@r.Id" /><button type="submit" class="chip-btn orange">Cancel</button></form>
+            </div>
+        }
+    }
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom:14px;">My Friends List <span style="color:var(--text-muted);font-weight:500;">(@Model.Friends.Count)</span></h3>
+    @if (!Model.Friends.Any())
+    {
+        <div class="empty-state">
+            <div class="icon-circle purple lg"><i class="bi bi-people"></i></div>
+            <h3>No friends yet</h3>
+            <p>Send a request above to start building your study group.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card-row">
+            @foreach (var f in Model.Friends)
+            {
+                var initials = "";
+                foreach (var part in f.DisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (initials.Length >= 2) break;
+                    initials += char.ToUpperInvariant(part[0]);
+                }
+                if (initials.Length == 0) { initials = "?"; }
+
+                <div class="list-item" style="margin-bottom:10px;">
+                    <div class="icon-circle purple">@initials</div>
+                    <div class="info">
+                        <div class="title">@f.DisplayName</div>
+                        <div class="meta">@f.Email</div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

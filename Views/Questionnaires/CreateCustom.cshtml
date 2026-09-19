@@ -66,6 +66,12 @@
 
         <div class="or-divider">&nbsp;</div>
 
+        <div class="field-label">Number of Questions to Generate</div>
+        <input type="number" name="QuestionCount" value="@(Model.QuestionCount <= 0 ? 5 : Model.QuestionCount)" min="1" max="30" class="auth-input" style="margin-bottom:6px;" />
+        <p class="desc" style="margin:0 0 20px 0;">Choose how many multiple-choice questions you want built from your documents.</p>
+
+        <div class="or-divider">&nbsp;</div>
+
         <div class="field-label">Select Category</div>
         <div class="pill-group" data-pill-group="Category">
             <button type="button" class="pill-btn selected mode-purple" data-value="Solo">
@@ -81,8 +87,55 @@
             <strong>Global</strong> creates a shared live room with a code so peers can join and compete in real-time.
         </p>
 
-        <div class="upload-actions">
-            <button type="submit" class="btn btn-primary"><i class="bi bi-stars"></i> Generate Questions &amp; Launch Room</button>
-        </div>
-    </div>
-</form>
+        @if (Model.Friends.Any())
+        {
+            <div class="field-label" id="inviteFriendsLabel" style="display:none;">
+                <i class="bi bi-people-fill" style="color:var(--green);"></i> Invite Friends Directly
+            </div>
+            <div id="inviteFriendsBox" style="display:none;margin-bottom:20px;">
+                <p class="desc" style="margin-top:0;">Select friends to automatically add them as participants to your room:</p>
+                @foreach (var f in Model.Friends)
+                {
+                    <label class="list-item doc-option" style="margin-bottom:10px;">
+                        <input class="doc-radio" type="checkbox" name="InviteFriendUserIds" value="@f.UserId" />
+                        <div class="icon-circle purple"><i class="bi bi-person-fill"></i></div>
+                        <div class="info">
+                            <div class="title">@f.DisplayName</div>
+                            <div class="meta">@f.Email</div>
+                        </div>
+                        <i class="bi bi-check-circle-fill doc-check"></i>
+                    </label>
+                }
+            </div>
+        }
+
+         <div class="upload-actions">
+             <button type="submit" class="btn btn-primary"><i class="bi bi-stars"></i> Generate Questions &amp; Launch Room</button>
+         </div>
+     </div>
+ </form>
+
+@if (Model.Friends.Any())
+{
+    <script>
+        (function () {
+            var group = document.querySelector('[data-pill-group="Category"]');
+            var label = document.getElementById('inviteFriendsLabel');
+            var box = document.getElementById('inviteFriendsBox');
+            if (!group || !label || !box) return;
+
+            function sync() {
+               var selected = group.querySelector('.pill-btn.selected');
+                var isGlobal = selected && selected.getAttribute('data-value') === 'Global';
+                label.style.display = isGlobal ? 'block' : 'none';
+                box.style.display = isGlobal ? 'block' : 'none';
+            }
+
+            group.querySelectorAll('.pill-btn').forEach(function (btn) {
+                btn.addEventListener('click', sync);
+            });
+            sync();
+        })();
+    </script>
+}
+

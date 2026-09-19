@@ -25,6 +25,11 @@ namespace EduSathi.Models
 
         public RoomCategory Category { get; set; }
 
+        // How many questions this room's quiz should show, chosen when the room
+        // was created ("Number of Questions to Generate"). Applied as a cap when
+        // the combined question list is built - see QuestionnairesController.BuildQuizViewModel.
+        public int QuestionCount { get; set; } = 5;
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Null until the host presses "Start Live Quiz" (Global) or the moment the

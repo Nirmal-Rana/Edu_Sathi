@@ -19,6 +19,7 @@ namespace EduSathi.Data
         public DbSet<QuizRoom> QuizRooms { get; set; }
         public DbSet<QuizRoomDocument> QuizRoomDocuments { get; set; }
         public DbSet<QuizRoomParticipant> QuizRoomParticipants { get; set; }
+        public DbSet<FriendRequest> FriendRequests { get; set; }
 
         protected override void OnModelCreating(Microsoft.EntityFrameworkCore.ModelBuilder builder)
         {
@@ -31,6 +32,22 @@ namespace EduSathi.Data
                 .HasIndex(r => r.Code)
                 .IsUnique()
                 .HasFilter("[Code] <> ''");
+
+            // FriendRequest has two FKs into AspNetUsers (Requester and Addressee).
+            // SQL Server refuses cascading deletes across more than one path to the
+            // same table, so both must be Restrict - deleting a user leaves their
+            // old friend-request rows behind rather than trying to cascade twice.
+            builder.Entity<FriendRequest>()
+                .HasOne(f => f.Requester)
+                .WithMany()
+                .HasForeignKey(f => f.RequesterUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            builder.Entity<FriendRequest>()
+                .HasOne(f => f.Addressee)
+                .WithMany()
+                .HasForeignKey(f => f.AddresseeUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

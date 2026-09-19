@@ -96,7 +96,8 @@ namespace EduSathi.Controllers
                 PreviousDocuments = await _context.UploadedDocuments
                     .Where(d => d.UserId == userId)
                     .OrderByDescending(d => d.UploadedAt)
-                    .ToListAsync()
+                    .ToListAsync(),
+                Friends = await GetFriendsAsync(userId!)
             };
             return View(vm);
         }
@@ -116,6 +117,7 @@ namespace EduSathi.Controllers
                 ModelState.AddModelError("", "Upload at least one PDF, or pick a saved one.");
                 model.PreviousDocuments = await _context.UploadedDocuments
                     .Where(d => d.UserId == userId).OrderByDescending(d => d.UploadedAt).ToListAsync();
+                model.Friends = await GetFriendsAsync(userId);
                 return View(model);
             }
 
@@ -140,6 +142,7 @@ namespace EduSathi.Controllers
                 Name = string.IsNullOrWhiteSpace(model.Name) ? "Untitled Quiz Room" : model.Name.Trim(),
                 CreatorUserId = userId,
                 Category = model.Category,
+                QuestionCount = Math.Clamp(model.QuestionCount <= 0 ? 5 : model.QuestionCount, 1, 30),
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -162,6 +165,16 @@ namespace EduSathi.Controllers
             await _context.SaveChangesAsync();
 
             await AddParticipantIfMissingAsync(room, isHost: true);
+
+            if (model.Category == RoomCategory.Global && model.InviteFriendUserIds != null && model.InviteFriendUserIds.Any())
+            {
+                var friendIds = await GetFriendsAsync(userId);
+                var validIds = friendIds.Select(f => f.UserId).Intersect(model.InviteFriendUserIds).ToList();
+                foreach (var friendId in validIds)
+                {
+                    await AddParticipantForUserAsync(room, friendId, isHost: false);
+                }
+            }
 
             if (model.Category == RoomCategory.Solo)
             {
@@ -349,6 +362,60 @@ namespace EduSathi.Controllers
             }
         }
 
+        // Same as AddParticipantIfMissingAsync, but for adding a *different* user
+        // (a friend the host is inviting directly) rather than the signed-in caller.
+        private async Task AddParticipantForUserAsync(QuizRoom room, string targetUserId, bool isHost)
+        {
+            var already = await _context.QuizRoomParticipants
+                .AnyAsync(p => p.QuizRoomId == room.Id && p.UserId == targetUserId);
+            if (already) return;
+
+            var user = await _userManager.FindByIdAsync(targetUserId);
+            if (user == null) return;
+
+            var displayName = !string.IsNullOrWhiteSpace(user.FullName) ? user.FullName : (user.Email ?? "Student");
+
+            _context.QuizRoomParticipants.Add(new QuizRoomParticipant
+            {
+                QuizRoomId = room.Id,
+                UserId = targetUserId,
+                DisplayName = displayName,
+                IsHost = isHost,
+                JoinedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
+            if (!isHost && !string.IsNullOrEmpty(room.Code))
+            {
+                await _hub.Clients.Group(room.Code).SendAsync("ParticipantJoined", new { displayName });
+            }
+        }
+
+        // Accepted friends of the given user, as FriendSummary rows - shared by
+        // CreateCustom (GET/POST) for the "Invite Friends Directly" list.
+        private async Task<List<FriendSummary>> GetFriendsAsync(string userId)
+        {
+            var all = await _context.FriendRequests
+                .Include(f => f.Requester)
+                .Include(f => f.Addressee)
+                .Where(f => f.Status == FriendRequestStatus.Accepted &&
+                            (f.RequesterUserId == userId || f.AddresseeUserId == userId))
+                .ToListAsync();
+
+            return all.Select(f =>
+            {
+                var other = f.RequesterUserId == userId ? f.Addressee : f.Requester;
+                return new FriendSummary
+                {
+                    UserId = other.Id,
+                    DisplayName = string.IsNullOrWhiteSpace(other.FullName) ? (other.Email ?? "Student") : other.FullName,
+                    Email = other.Email ?? ""
+                };
+            })
+                .DistinctBy(f => f.UserId)
+                .ToList();
+        }
+
         private async Task<QuizRoom?> LoadRoomByCodeAsync(string? roomCode)
         {
             var code = (roomCode ?? "").Trim().ToUpperInvariant();
@@ -387,6 +454,7 @@ namespace EduSathi.Controllers
             var questions = _context.Questions
                 .Where(q => documentIds.Contains(q.UploadedDocumentId))
                 .OrderBy(q => q.UploadedDocumentId).ThenBy(q => q.Level).ThenBy(q => q.Id)
+                .Take(room.QuestionCount > 0 ? room.QuestionCount : 5)
                 .ToList();
 
             var vm = new RoomQuizViewModel
