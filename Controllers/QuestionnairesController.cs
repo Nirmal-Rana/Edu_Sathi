@@ -14,25 +14,12 @@ using EduSathi.Data;
 using EduSathi.Hubs;
 using EduSathi.Models;
 using EduSathi.ViewModels;
+using EduSathi.Services;
+using UglyToad.PdfPig;
+using System.Text.Json;
 
 namespace EduSathi.Controllers
 {
-    // ============================================================================
-    // Questionnaires: the "Solo vs Global live room" flow. Separate from
-    // ExamController (which is the single-document upload -> summary -> practice
-    // flow already on Home/History) so neither controller has to know about the
-    // other's concerns.
-    //
-    //   Index        GET  /Questionnaires            Hub: join a room or create one
-    //   JoinRoom      POST /Questionnaires/JoinRoom    Join a Global room by code
-    //   CreateCustom GET  /Questionnaires/CreateCustom Upload/select PDFs, pick Solo/Global
-    //   CreateCustom POST /Questionnaires/CreateCustom Creates the room
-    //   RoomLobby    GET  /Questionnaires/RoomLobby     Code + live participant list (Global)
-    //   StartRoom    POST /Questionnaires/StartRoom     Host only - starts the room for everyone
-    //   RoomQuiz     GET  /Questionnaires/RoomQuiz      The combined-question quiz for a room
-    //   RoomQuiz     POST /Questionnaires/RoomQuiz      Grades + records this participant's score
-    //   MyQuizzes    GET  /Questionnaires/MyQuizzes     Rooms you created or joined
-    // ============================================================================
     [Authorize]
     public class QuestionnairesController : Controller
     {
@@ -41,27 +28,29 @@ namespace EduSathi.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IHubContext<RoomHub> _hub;
 
-        private const string CodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I - easy to misread on screen
+        private readonly SummaryService _summaryService;
+        private readonly McqService _mcqService;
+
+        private const string CodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
         public QuestionnairesController(
             ApplicationDbContext context,
             IWebHostEnvironment env,
             UserManager<ApplicationUser> userManager,
-            IHubContext<RoomHub> hub)
+            IHubContext<RoomHub> hub,
+            SummaryService summaryService,
+            McqService mcqService)
         {
             _context = context;
             _env = env;
             _userManager = userManager;
             _hub = hub;
+            _summaryService = summaryService;
+            _mcqService = mcqService;
         }
 
-        // GET: /Questionnaires
-        public IActionResult Index()
-        {
-            return View();
-        }
+        public IActionResult Index() => View();
 
-        // POST: /Questionnaires/JoinRoom
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> JoinRoom(string roomCode)
@@ -73,9 +62,7 @@ namespace EduSathi.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var room = await _context.QuizRooms
-                .FirstOrDefaultAsync(r => r.Code == code);
-
+            var room = await _context.QuizRooms.FirstOrDefaultAsync(r => r.Code == code);
             if (room == null)
             {
                 TempData["JoinError"] = "That room code doesn't match a live room.";
@@ -83,11 +70,9 @@ namespace EduSathi.Controllers
             }
 
             await AddParticipantIfMissingAsync(room, isHost: false);
-
             return RedirectToAction(nameof(RoomLobby), new { roomCode = code });
         }
 
-        // GET: /Questionnaires/CreateCustom
         public async Task<IActionResult> CreateCustom()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -101,7 +86,6 @@ namespace EduSathi.Controllers
             return View(vm);
         }
 
-        // POST: /Questionnaires/CreateCustom
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateCustom(CreateRoomViewModel model)
@@ -154,7 +138,6 @@ namespace EduSathi.Controllers
             }
             else
             {
-                // Solo rooms start themselves - there's no one to wait in a lobby for.
                 room.StartedAt = DateTime.UtcNow;
             }
 
@@ -165,14 +148,12 @@ namespace EduSathi.Controllers
 
             if (model.Category == RoomCategory.Solo)
             {
-                // Solo rooms have no code - looked up by id instead (see LoadRoomForQuizAsync).
                 return RedirectToAction(nameof(RoomQuiz), new { id = room.Id });
             }
 
             return RedirectToAction(nameof(RoomLobby), new { roomCode = room.Code });
         }
 
-        // GET: /Questionnaires/RoomLobby?roomCode=XXXXXX
         public async Task<IActionResult> RoomLobby(string roomCode)
         {
             var room = await LoadRoomByCodeAsync(roomCode);
@@ -200,7 +181,6 @@ namespace EduSathi.Controllers
             return View(vm);
         }
 
-        // POST: /Questionnaires/StartRoom
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> StartRoom(string roomCode)
@@ -226,8 +206,6 @@ namespace EduSathi.Controllers
             return RedirectToAction(nameof(RoomQuiz), new { roomCode = room.Code });
         }
 
-        // GET: /Questionnaires/RoomQuiz?roomCode=XXXXXX   (Global rooms)
-        // GET: /Questionnaires/RoomQuiz?id=5               (Solo rooms - no code)
         public async Task<IActionResult> RoomQuiz(string? roomCode, int? id)
         {
             var room = await LoadRoomForQuizAsync(roomCode, id);
@@ -246,9 +224,6 @@ namespace EduSathi.Controllers
             return View(vm);
         }
 
-        // POST: /Questionnaires/RoomQuiz
-        // `answers` binds from inputs named answers[<questionId>] with values "A".."D",
-        // same convention ExamController.Quiz uses.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ActionName("RoomQuiz")]
@@ -289,7 +264,6 @@ namespace EduSathi.Controllers
             return View("RoomQuiz", vm);
         }
 
-        // GET: /Questionnaires/MyQuizzes
         public async Task<IActionResult> MyQuizzes()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -320,8 +294,6 @@ namespace EduSathi.Controllers
 
             return View(rows);
         }
-
-        // ====================== helpers ======================
 
         private async Task AddParticipantIfMissingAsync(QuizRoom room, bool isHost)
         {
@@ -360,8 +332,6 @@ namespace EduSathi.Controllers
                 .FirstOrDefaultAsync(r => r.Code == code);
         }
 
-        // Global rooms are looked up by their shareable code; Solo rooms have no
-        // code, so they're looked up by id and scoped to the signed-in creator.
         private async Task<QuizRoom?> LoadRoomForQuizAsync(string? roomCode, int? id)
         {
             if (!string.IsNullOrWhiteSpace(roomCode))
@@ -437,18 +407,12 @@ namespace EduSathi.Controllers
                 var taken = await _context.QuizRooms.AnyAsync(r => r.Code == code);
                 if (!taken) return code;
             }
-            // Astronomically unlikely, but fall back to a guaranteed-unique suffix.
             return Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
         }
 
-        // Mirrors ExamController.ProcessSubmission's new-file branch: saves the PDF,
-        // stores a placeholder summary, and seeds one sample question per difficulty
-        // level. Kept as its own copy here (rather than shared) because the two
-        // controllers' upload flows differ - this one can run for several files in
-        // one request instead of exactly one.
         private async Task<UploadedDocument> CreateSeededDocumentAsync(string userId, Microsoft.AspNetCore.Http.IFormFile file)
         {
-            string uploadsFolder = Path.Combine(_env.WebRootPath, "uploads");
+            string uploadsFolder = Path.Combine(Path.GetTempPath(), "EduSathiUploads");
             Directory.CreateDirectory(uploadsFolder);
             string uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
             string filePath = Path.Combine(uploadsFolder, uniqueFileName);
@@ -458,23 +422,100 @@ namespace EduSathi.Controllers
                 await file.CopyToAsync(fileStream);
             }
 
+            string extractedText = "";
+            try
+            {
+                using (var pdf = PdfDocument.Open(filePath))
+                {
+                    foreach (var page in pdf.GetPages())
+                    {
+                        extractedText += page.Text + " ";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to parse PDF: {ex.Message}");
+                extractedText = "Error reading PDF file structure.";
+            }
+
+            if (extractedText.Length > 30000)
+            {
+                extractedText = extractedText.Substring(0, 30000);
+            }
+
+            string aiSummary = await _summaryService.GenerateSummaryAsync(extractedText);
+
             var doc = new UploadedDocument
             {
                 UserId = userId,
                 FileName = file.FileName,
                 FilePath = filePath,
-                Summary = "This is an automated summary generated from your multi-page PDF text.",
+                ExtractedText = extractedText,
+                Summary = aiSummary,
                 UploadedAt = DateTime.UtcNow
             };
-
-            doc.Questions.Add(new Question { QuestionText = "What is a basic concept covered in this document?", OptionA = "Option A", OptionB = "Option B", OptionC = "Option C", OptionD = "Option D", CorrectOption = "A", Level = QuestionLevel.Basic, Explanation = "Basic explanation." });
-            doc.Questions.Add(new Question { QuestionText = "How do you apply the medium-level concept here?", OptionA = "Option A", OptionB = "Option B", OptionC = "Option C", OptionD = "Option D", CorrectOption = "B", Level = QuestionLevel.Medium, Explanation = "Medium explanation." });
-            doc.Questions.Add(new Question { QuestionText = "What is the hard analytical conclusion?", OptionA = "Option A", OptionB = "Option B", OptionC = "Option C", OptionD = "Option D", CorrectOption = "C", Level = QuestionLevel.Hard, Explanation = "Hard explanation." });
 
             _context.UploadedDocuments.Add(doc);
             await _context.SaveChangesAsync();
 
+            foreach (var level in new[] { QuestionLevel.Basic, QuestionLevel.Medium, QuestionLevel.Hard })
+            {
+                try
+                {
+                    var jsonResponse = await _mcqService.GenerateMcqsAsync(extractedText, (int)level);
+
+                    if (!string.IsNullOrEmpty(jsonResponse))
+                    {
+                        var generatedQuestions = JsonSerializer.Deserialize<List<Question>>(jsonResponse, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (generatedQuestions != null)
+                        {
+                            foreach (var q in generatedQuestions)
+                            {
+                                doc.Questions.Add(new Question
+                                {
+                                    UploadedDocumentId = doc.Id,
+                                    QuestionText = q.QuestionText,
+                                    OptionA = q.OptionA,
+                                    OptionB = q.OptionB,
+                                    OptionC = q.OptionC,
+                                    OptionD = q.OptionD,
+                                    CorrectOption = q.CorrectOption,
+                                    Level = level,
+                                    Explanation = q.Explanation
+                                });
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error parsing questions for {level}: {ex.Message}");
+                }
+            }
+
+            await _context.SaveChangesAsync();
             return doc;
+        }
+
+        public async Task<IActionResult> Profile()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return RedirectToAction("Login", "Account", new { area = "Identity" });
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound();
+
+            var histories = await _context.QuizHistories.Where(h => h.UserId == userId).ToListAsync();
+
+            ViewBag.TotalQuizzes = histories.Count;
+            ViewBag.AverageScore = histories.Any() ? histories.Average(h => (double)h.Score / h.TotalQuestions * 100).ToString("0.0") : "0";
+
+            return View(user);
         }
     }
 }

@@ -1,124 +1,118 @@
-﻿@*
-    Views/Questionnaires/RoomQuiz.cshtml — NEW FILE.
-
-    Same answerable-MCQ markup contract as Views/Exam/Quiz.cshtml (edusathi.css
-    keys correct/incorrect states off .option-list li:has(input.correct/:checked)),
-    plus a leaderboard card for Global rooms once at least one person has
-    finished. The leaderboard updates live via Hubs/RoomHub's LeaderboardUpdated
-    event - see wwwroot/js/room-live.js.
-*@
-@using EduSathi.Models
-@using EduSathi.ViewModels
-@model RoomQuizViewModel
+﻿@model EduSathi.ViewModels.RoomQuizViewModel
 
 @{
-    ViewData["Title"] = Model.Name;
+    ViewData["Title"] = "Room Quiz";
     Layout = "~/Views/Shared/_DashboardLayout.cshtml";
-    var isGlobal = Model.Category == RoomCategory.Global;
 }
 
-<div class="page-header">
+<div class="page-header mb-4">
     <div>
         <h1>@Model.Name</h1>
-        <p class="subtitle quiz-meta-inline">@Model.Total question@(Model.Total == 1 ? "" : "s") @(isGlobal ? "· Live Room " + Model.RoomCode : "· Solo practice")</p>
+        @if (Model.Category == EduSathi.Models.RoomCategory.Global && !string.IsNullOrEmpty(Model.RoomCode))
+        {
+            <p class="subtitle text-muted">Room Code: <strong>@Model.RoomCode</strong></p>
+        }
     </div>
-    <a class="btn-back" asp-action="MyQuizzes"><i class="bi bi-arrow-left"></i> Back</a>
+    <a class="btn btn-outline-secondary" asp-action="Index"><i class="bi bi-arrow-left"></i> Exit Quiz</a>
 </div>
 
-@if (Model.IsSubmitted)
-{
-    <div class="score-banner">
-        <div>
-            <div class="score-value">@Model.CorrectCount/@Model.Total</div>
-            <div class="score-label">correct answers</div>
-        </div>
-        <div style="flex:1;">
-            <div style="font-weight:700;">+@Model.XpEarned XP</div>
-            <div class="score-label">@Model.PercentCorrect% correct</div>
-        </div>
-    </div>
-
-    @if (isGlobal)
-    {
-        <div class="card" data-room-code="@Model.RoomCode" data-leaderboard>
-            <h3 style="margin-bottom:14px;"><i class="bi bi-trophy-fill" style="color:var(--orange);"></i> Leaderboard</h3>
-            <div id="leaderboardList">
-                @{ var rank = 0; }
-                @foreach (var entry in Model.Leaderboard)
-                {
-                    rank++;
-                    <div class="list-item" style="margin-bottom:10px;">
-                        <div class="icon-circle @(rank == 1 ? "orange" : "purple")">
-                            @if (rank == 1) { <i class="bi bi-trophy-fill"></i> } else { <span>@rank</span> }
-                        </div>
-                        <div class="info">
-                            <div class="title">@entry.DisplayName @(entry.IsHost ? "(Host)" : "")</div>
-                            <div class="meta">@(entry.Finished ? entry.Score + "/" + entry.Total + " correct" : "Still playing…")</div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-}
-
-@if (Model.Total == 0)
-{
-    <div class="empty-state">
-        <div class="icon-circle purple lg"><i class="bi bi-question-circle"></i></div>
-        <h3>No questions in this room yet</h3>
-        <p>The attached document doesn't have any generated questions.</p>
-        <a class="btn btn-primary" asp-action="Index">Back to Questionnaires</a>
-    </div>
-}
-else if (!Model.IsSubmitted)
-{
-    <form method="post" asp-action="RoomQuiz">
-        @if (isGlobal)
-        {
+<div class="row">
+    <!-- Quiz Questions Column -->
+    <div class="col-lg-8">
+        <form asp-action="RoomQuizSubmit" method="post">
             <input type="hidden" name="roomCode" value="@Model.RoomCode" />
+            <input type="hidden" name="id" value="@Model.RoomId" />
+
+            @for (int i = 0; i < Model.Questions.Count; i++)
+            {
+                var q = Model.Questions[i];
+                var qNum = i + 1;
+                var picked = Model.Answers != null && Model.Answers.ContainsKey(q.Id) ? Model.Answers[q.Id] : null;
+
+                <div class="card mb-4 p-4 shadow-sm border-0 bg-white">
+                    <h5 class="fw-bold mb-4">@qNum. @q.QuestionText</h5>
+                    
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var opt in new[] { "A", "B", "C", "D" })
+                        {
+                            var optText = opt == "A" ? q.OptionA : opt == "B" ? q.OptionB : opt == "C" ? q.OptionC : q.OptionD;
+                            var isChecked = picked == opt;
+                            var isCorrect = Model.IsSubmitted && q.CorrectOption == opt;
+                            var isWrong = Model.IsSubmitted && isChecked && !isCorrect;
+                            
+                            var bgClass = "";
+                            if (Model.IsSubmitted) {
+                                if (isCorrect) bgClass = "bg-success-subtle border-success text-success";
+                                else if (isWrong) bgClass = "bg-danger-subtle border-danger text-danger";
+                            }
+
+                            <label class="p-3 border rounded @bgClass" style="cursor: pointer;">
+                                <input type="radio" name="answers[@q.Id]" value="@opt" @(isChecked ? "checked" : "") @(Model.IsSubmitted ? "disabled" : "") class="me-2 form-check-input" />
+                                <strong class="me-1">@opt.</strong> @optText
+                            </label>
+                        }
+                    </div>
+
+                    @if (Model.IsSubmitted)
+                    {
+                        <div class="mt-4 p-3 bg-light rounded text-muted border">
+                            <strong class="text-dark"><i class="bi bi-info-circle text-primary"></i> Explanation:</strong> @q.Explanation
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (!Model.IsSubmitted)
+            {
+                <button type="submit" class="btn btn-primary btn-lg w-100 mb-5 shadow-sm">
+                    <i class="bi bi-check2-circle"></i> Submit Quiz
+                </button>
+            }
+        </form>
+    </div>
+
+    <!-- Sidebar / Results Column -->
+    <div class="col-lg-4">
+        @if (Model.IsSubmitted)
+        {
+            <div class="card p-4 shadow-sm mb-4 text-center border-0 bg-white">
+                <h5 class="fw-bold text-muted text-uppercase mb-2">Your Score</h5>
+                <h1 class="text-primary display-4 fw-bold mb-0">@Model.CorrectCount <span class="fs-4 text-muted">/ @Model.Total</span></h1>
+            </div>
+
+            @if (Model.Category == EduSathi.Models.RoomCategory.Global && Model.Leaderboard != null)
+            {
+                <div class="card p-4 shadow-sm border-0 bg-white">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-trophy-fill text-warning"></i> Live Leaderboard</h5>
+                    <ul class="list-group list-group-flush" id="leaderboard-list">
+                        @foreach (var entry in Model.Leaderboard)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                                <div>
+                                    <span class="fw-semibold text-dark">@entry.DisplayName</span>
+                                    @if(entry.IsHost) { <span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">Host</span> }
+                                </div>
+                                <span class="fw-bold text-primary fs-5">@(entry.Score.HasValue ? $"{entry.Score}/{entry.Total}" : "...")</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
         }
         else
         {
-            <input type="hidden" name="id" value="@Model.RoomId" />
-        }
-
-        @{ var number = 0; }
-        @foreach (var q in Model.Questions)
-        {
-            number++;
-            <div class="question-card">
-                <div class="q-head">
-                    <div class="q-number">@number</div>
-                    <div class="q-text">@q.QuestionText</div>
+            <div class="card p-4 shadow-sm sticky-top border-0 bg-white" style="top: 20px;">
+                <h5 class="fw-bold mb-3"><i class="bi bi-info-square-fill text-primary"></i> Quiz Details</h5>
+                <hr class="mt-0 mb-3" />
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Questions</span>
+                    <strong class="text-dark">@Model.Total</strong>
                 </div>
-
-                <div class="option-list">
-                    <ol>
-                        @foreach (var (letter, text) in RoomQuizViewModel.OptionsOf(q))
-                        {
-                            var inputId = $"q{q.Id}_{letter}";
-                            <li>
-                                <input type="radio" id="@inputId" name="answers[@q.Id]" value="@letter" />
-                                <label for="@inputId">@text</label>
-                            </li>
-                        }
-                    </ol>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Category</span>
+                    <strong class="text-dark">@Model.Category</strong>
                 </div>
             </div>
         }
-
-        <div class="sticky-submit-bar">
-            <span class="answered-count" data-answered-count>0/@Model.Total answered</span>
-            <button type="submit" class="btn btn-primary">Submit Answers</button>
-        </div>
-    </form>
-}
-
-@section Scripts {
-    @if (isGlobal)
-    {
-        <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
-        <script src="~/js/room-live.js" asp-append-version="true"></script>
-    }
-}
+    </div>
+</div>

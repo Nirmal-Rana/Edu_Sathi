@@ -12,15 +12,21 @@ namespace EduSathi.Data
         {
         }
 
+        // Common Tables
         public DbSet<UploadedDocument> UploadedDocuments { get; set; }
         public DbSet<Question> Questions { get; set; }
 
-        // Questionnaires / live rooms (Solo + Global competitive quizzes).
+        // Questionnaires / live rooms (Solo + Global competitive quizzes)
         public DbSet<QuizRoom> QuizRooms { get; set; }
         public DbSet<QuizRoomDocument> QuizRoomDocuments { get; set; }
         public DbSet<QuizRoomParticipant> QuizRoomParticipants { get; set; }
 
-        protected override void OnModelCreating(Microsoft.EntityFrameworkCore.ModelBuilder builder)
+        // Custom rooms and History
+        public DbSet<CustomRoom> CustomRooms { get; set; }
+        public DbSet<RoomParticipant> RoomParticipants { get; set; }
+        public DbSet<QuizHistory> QuizHistories { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 

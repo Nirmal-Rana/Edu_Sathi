@@ -4,6 +4,7 @@ using EduSathi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EduSathi.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260918115126_update2")]
+    partial class update2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -175,7 +178,7 @@ namespace EduSathi.Migrations
                     b.ToTable("Questions");
                 });
 
-            modelBuilder.Entity("EduSathi.Models.QuizRoom", b =>
+            modelBuilder.Entity("EduSathi.Models.RoomParticipant", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -183,98 +186,28 @@ namespace EduSathi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("Category")
+                    b.Property<int>("CustomRoomId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatorUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("StartedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasFilter("[Code] <> ''");
-
-                    b.ToTable("QuizRooms");
-                });
-
-            modelBuilder.Entity("EduSathi.Models.QuizRoomDocument", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("QuizRoomId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UploadedDocumentId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("QuizRoomId");
-
-                    b.HasIndex("UploadedDocumentId");
-
-                    b.ToTable("QuizRoomDocuments");
-                });
-
-            modelBuilder.Entity("EduSathi.Models.QuizRoomParticipant", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsHost")
+                    b.Property<bool>("HasSubmitted")
                         .HasColumnType("bit");
 
-                    b.Property<DateTime>("JoinedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("QuizRoomId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("Score")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("TotalQuestions")
+                    b.Property<int>("Score")
                         .HasColumnType("int");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("QuizRoomId");
+                    b.HasIndex("CustomRoomId");
 
-                    b.ToTable("QuizRoomParticipants");
+                    b.ToTable("RoomParticipants");
                 });
 
             modelBuilder.Entity("EduSathi.Models.UploadedDocument", b =>
@@ -461,34 +394,15 @@ namespace EduSathi.Migrations
                     b.Navigation("UploadedDocument");
                 });
 
-            modelBuilder.Entity("EduSathi.Models.QuizRoomDocument", b =>
+            modelBuilder.Entity("EduSathi.Models.RoomParticipant", b =>
                 {
-                    b.HasOne("EduSathi.Models.QuizRoom", "QuizRoom")
-                        .WithMany("Documents")
-                        .HasForeignKey("QuizRoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("EduSathi.Models.UploadedDocument", "UploadedDocument")
-                        .WithMany()
-                        .HasForeignKey("UploadedDocumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("QuizRoom");
-
-                    b.Navigation("UploadedDocument");
-                });
-
-            modelBuilder.Entity("EduSathi.Models.QuizRoomParticipant", b =>
-                {
-                    b.HasOne("EduSathi.Models.QuizRoom", "QuizRoom")
+                    b.HasOne("EduSathi.Models.CustomRoom", "CustomRoom")
                         .WithMany("Participants")
-                        .HasForeignKey("QuizRoomId")
+                        .HasForeignKey("CustomRoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("QuizRoom");
+                    b.Navigation("CustomRoom");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -542,10 +456,8 @@ namespace EduSathi.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("EduSathi.Models.QuizRoom", b =>
+            modelBuilder.Entity("EduSathi.Models.CustomRoom", b =>
                 {
-                    b.Navigation("Documents");
-
                     b.Navigation("Participants");
                 });
 

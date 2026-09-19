@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
@@ -16,24 +15,25 @@ using UglyToad.PdfPig;
 
 namespace EduSathi.Controllers
 {
+    // Single responsibility: accept a PDF (new upload or previously stored),
+    // extract its text, generate an AI summary, and persist the resulting
+    // UploadedDocument. Does not know anything about quiz questions, grading,
+    // or quiz history — that belongs to QuizController.
     [Authorize]
-    public class ExamController : Controller
+    public class SummaryController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
-
-        // Replaced GeminiService with your two new isolated services
         private readonly SummaryService _summaryService;
-        private readonly McqService _mcqService;
 
-        public ExamController(ApplicationDbContext context, IWebHostEnvironment env, SummaryService summaryService, McqService mcqService)
+        public SummaryController(ApplicationDbContext context, IWebHostEnvironment env, SummaryService summaryService)
         {
             _context = context;
             _env = env;
             _summaryService = summaryService;
-            _mcqService = mcqService;
         }
 
+        // GET: /Summary
         public async Task<IActionResult> Index()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -50,6 +50,7 @@ namespace EduSathi.Controllers
             return View(viewModel);
         }
 
+        // POST: /Summary/ProcessSubmission
         [HttpPost]
         public async Task<IActionResult> ProcessSubmission(ExamDashboardViewModel model)
         {
@@ -86,7 +87,7 @@ namespace EduSathi.Controllers
                     extractedText = extractedText.Substring(0, 30000);
                 }
 
-                // Generates comprehensive learning summary using the new SummaryService
+                // Generate comprehensive learning summary only
                 string aiSummary = await _summaryService.GenerateSummaryAsync(extractedText);
 
                 var newDoc = new UploadedDocument
@@ -111,86 +112,8 @@ namespace EduSathi.Controllers
                 return View("Index", model);
             }
 
-            return RedirectToAction(nameof(QuizSession), new { id = targetDocumentId });
-        }
-
-        public async Task<IActionResult> QuizSession(int id)
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var document = await _context.UploadedDocuments
-                .Include(d => d.Questions) // Include the generated questions
-                .FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId);
-
-            if (document == null) return NotFound();
-
-            var viewModel = new QuizSessionViewModel
-            {
-                DocumentId = document.Id,
-                FileName = document.FileName,
-                Summary = document.Summary,
-                Questions = document.Questions.ToList() // Pass the questions here!
-            };
-
-            return View(viewModel);
-        }
-
-        // ====================== ADDED BELOW THIS LINE ======================
-
-        // GET: /Exam/History
-        public async Task<IActionResult> History()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var userDocs = await _context.UploadedDocuments
-                .Include(d => d.Questions)
-                .Where(d => d.UserId == userId)
-                .OrderByDescending(d => d.UploadedAt)
-                .ToListAsync();
-
-            return View(userDocs);
-        }
-
-        // GET: /Exam/Quiz?id=5&level=Basic
-        public async Task<IActionResult> Quiz(int id, QuestionLevel level = QuestionLevel.Basic)
-        {
-            var vm = await BuildAttemptAsync(id, level);
-            if (vm == null) return NotFound();
-            return View(vm);
-        }
-
-        // POST: /Exam/Quiz
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [ActionName("Quiz")]
-        public async Task<IActionResult> QuizSubmit(int id, QuestionLevel level, Dictionary<int, string>? answers)
-        {
-            var vm = await BuildAttemptAsync(id, level);
-            if (vm == null) return NotFound();
-
-            vm.Answers = answers ?? new Dictionary<int, string>();
-            vm.IsSubmitted = true;
-            vm.CorrectCount = vm.Questions.Count(q =>
-                vm.Answers.TryGetValue(q.Id, out var picked) &&
-                string.Equals(picked, q.CorrectOption, StringComparison.OrdinalIgnoreCase));
-
-            return View("Quiz", vm);
-        }
-
-        private async Task<QuizAttemptViewModel?> BuildAttemptAsync(int documentId, QuestionLevel level)
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var document = await _context.UploadedDocuments
-                .Include(d => d.Questions)
-                .FirstOrDefaultAsync(d => d.Id == documentId && d.UserId == userId);
-
-            if (document == null) return null;
-
-            return new QuizAttemptViewModel
-            {
-                DocumentId = document.Id,
-                FileName = document.FileName,
-                Level = level,
-                Questions = document.Questions.Where(q => q.Level == level).ToList()
-            };
+            // Summary's job ends here — hand off to QuizController for the quiz experience.
+            return RedirectToAction("QuizSession", "Quiz", new { id = targetDocumentId });
         }
     }
 }

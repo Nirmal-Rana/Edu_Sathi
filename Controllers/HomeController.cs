@@ -11,7 +11,7 @@ namespace EduSathi.Controllers
             // If the user is already signed in, send them directly to the exam dashboard
             if (User.Identity != null && User.Identity.IsAuthenticated)
             {
-                return RedirectToAction("Index", "Exam");
+                return RedirectToAction("Index", "Summary");
             }
 
             // Otherwise, show the public home/landing page

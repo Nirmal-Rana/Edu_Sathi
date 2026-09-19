@@ -1,0 +1,48 @@
+﻿@model EduSathi.Models.ApplicationUser
+
+@{
+    ViewData["Title"] = "Profile";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+
+    // Safely get display name and initials
+    var displayName = !string.IsNullOrWhiteSpace(Model.FullName) ? Model.FullName : Model.UserName;
+    var initials = string.IsNullOrWhiteSpace(displayName) ? "?" : displayName.Substring(0, 1).ToUpper();
+}
+
+<div class="page-header">
+    <div><h1>Profile</h1></div>
+</div>
+
+<div class="card">
+    <div class="profile-header">
+        <div class="avatar">@initials</div>
+        <div>
+            <div class="name">@displayName</div>
+            <div class="grade">@Model.Email</div>
+        </div>
+    </div>
+</div>
+
+<div class="card-row" style="margin-bottom:20px;">
+    <div class="stat-card">
+        <div class="icon-circle purple"><i class="bi bi-file-earmark-text"></i></div>
+        <div class="stat-value">@ViewBag.TotalQuizzes</div>
+        <div class="stat-label">Quizzes Attended</div>
+    </div>
+    <div class="stat-card">
+        <div class="icon-circle green"><i class="bi bi-graph-up-arrow"></i></div>
+        <div class="stat-value">@ViewBag.AverageScore%</div>
+        <div class="stat-label">Avg. Score</div>
+    </div>
+</div>
+
+<div class="card settings-list" style="padding:8px 24px;">
+    <div class="list-item" style="box-shadow:none;margin-bottom:0;border-bottom:1px solid var(--border-color);border-radius:0;padding:16px 0;">
+        <span class="info"><i class="bi bi-envelope"></i> <span class="label">Email</span></span>
+        <span class="meta-right">@Model.Email</span>
+    </div>
+    <div class="list-item" style="box-shadow:none;margin-bottom:0;padding:16px 0;">
+        <span class="info"><i class="bi bi-telephone"></i> <span class="label">Contact</span></span>
+        <span class="meta-right">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "Not set" : Model.PhoneNumber)</span>
+    </div>
+</div>

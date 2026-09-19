@@ -1,0 +1,21 @@
+﻿@model EduSathi.ViewModels.QuizResultViewModel
+
+@{
+    ViewData["Title"] = "Quiz Result - " + Model.FileName;
+    var percentage = Model.TotalQuestions > 0 ? (Model.Score * 100.0 / Model.TotalQuestions) : 0;
+}
+
+<div class="container mt-4 mb-5">
+    <div class="card p-4 shadow-sm border-0 text-center">
+        <h2>Quiz Complete!</h2>
+        <p class="text-muted">@Model.FileName</p>
+
+        <h1 class="display-4 my-3">@Model.Score / @Model.TotalQuestions</h1>
+        <p class="lead">@percentage.ToString("0.0")% correct</p>
+
+        <div class="mt-4">
+            <a asp-controller="Quiz" asp-action="QuizSession" asp-route-id="@Model.DocumentId" class="btn btn-outline-primary">Retake Quiz</a>
+            <a asp-controller="Summary" asp-action="Index" class="btn btn-primary ms-2">Back to Dashboard</a>
+        </div>
+    </div>
+</div>

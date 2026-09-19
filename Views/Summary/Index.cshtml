@@ -1,0 +1,39 @@
+﻿@model EduSathi.ViewModels.ExamDashboardViewModel
+
+@{
+    ViewData["Title"] = "Exam Preparation Hub";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="container mt-4">
+    <h2>Exam Prep Dashboard</h2>
+    <hr />
+
+    <form id="uploadForm" asp-action="ProcessSubmission" enctype="multipart/form-data" method="post" class="card p-4 shadow-sm">
+        <div class="mb-3">
+            <label class="form-label font-weight-bold">Upload New PDF From Device</label>
+            <input asp-for="NewPdfFile" type="file" class="form-control" accept=".pdf" />
+        </div>
+
+        <div class="text-center my-2 text-muted">- OR -</div>
+
+        <div class="mb-3">
+            <label class="form-label font-weight-bold">Select from Previously Uploaded PDFs</label>
+            <select asp-for="SelectedExistingDocumentId" class="form-select" asp-items="@(new SelectList(Model.PreviousDocuments, "Id", "FileName"))">
+                <option value="">-- Choose a saved PDF --</option>
+            </select>
+        </div>
+
+        <button id="submitBtn" type="submit" class="btn btn-primary mt-3">Generate Summary & Launch Quiz</button>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function() {
+            var btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating summary and questions... Please wait.';
+        });
+    </script>
+}

@@ -1,0 +1,43 @@
+﻿@*
+    Views/Questionnaires/Index.cshtml — NEW FILE.
+
+    Format inspiration: the "Join a Room / Create Custom" two-up layout from the
+    reference screenshots. Design is EduSathi's own — .choice-grid/.choice-card,
+    dark sidebar shell, existing icon-circle colours - nothing borrowed visually.
+*@
+@{
+    ViewData["Title"] = "Questionnaires";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Questionnaires Hub</h1>
+        <p class="subtitle">Join a live room with a code, or create your own quiz.</p>
+    </div>
+</div>
+
+@if (TempData["JoinError"] != null)
+{
+    <div class="field-errors card" style="padding:14px 18px;">@TempData["JoinError"]</div>
+}
+
+<div class="choice-grid">
+    <div class="choice-card">
+        <div class="icon-circle purple"><i class="bi bi-door-open-fill"></i></div>
+        <h3>Join a Room</h3>
+        <p>Enter a shareable code given by your peer to join a live room and compete in real-time.</p>
+
+        <form asp-action="JoinRoom" method="post" style="margin-top:16px;display:flex;gap:8px;">
+            <input type="text" name="roomCode" class="auth-input" placeholder="Enter room code..."
+                   maxlength="6" style="margin-bottom:0;text-transform:uppercase;" autocomplete="off" />
+            <button type="submit" class="btn btn-primary">Join</button>
+        </form>
+    </div>
+
+    <a class="choice-card" asp-action="CreateCustom">
+        <div class="icon-circle green"><i class="bi bi-plus-circle-fill"></i></div>
+        <h3>Create Custom</h3>
+        <p>Upload one or more PDFs, pick Solo or Global, and generate your quiz room.</p>
+    </a>
+</div>
