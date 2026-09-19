@@ -1,22 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using EduSathi.Data;
+using EduSathi.Hubs;
+using EduSathi.Models;
+using EduSathi.Services;
+using EduSathi.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using EduSathi.Data;
-using EduSathi.Hubs;
-using EduSathi.Models;
-using EduSathi.ViewModels;
-using EduSathi.Services;
-using UglyToad.PdfPig;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using UglyToad.PdfPig;
 
 namespace EduSathi.Controllers
 {
@@ -27,8 +28,6 @@ namespace EduSathi.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IHubContext<RoomHub> _hub;
-
-        private readonly SummaryService _summaryService;
         private readonly McqService _mcqService;
 
         private const string CodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -38,14 +37,12 @@ namespace EduSathi.Controllers
             IWebHostEnvironment env,
             UserManager<ApplicationUser> userManager,
             IHubContext<RoomHub> hub,
-            SummaryService summaryService,
             McqService mcqService)
         {
             _context = context;
             _env = env;
             _userManager = userManager;
             _hub = hub;
-            _summaryService = summaryService;
             _mcqService = mcqService;
         }
 
@@ -114,7 +111,7 @@ namespace EduSathi.Controllers
             {
                 foreach (var file in model.NewPdfFiles!.Where(f => f.Length > 0))
                 {
-                    var doc = await CreateSeededDocumentAsync(userId, file);
+                    var doc = await CreateSeededDocumentAsync(userId, file, model.QuestionCount);
                     documentIds.Add(doc.Id);
                 }
             }
@@ -178,6 +175,29 @@ namespace EduSathi.Controllers
                 Participants = room.Participants.OrderBy(p => p.JoinedAt).ToList()
             };
 
+            // Integrated friend invite options loading for the host
+            if (me.IsHost)
+            {
+                var participantUserIds = room.Participants.Select(p => p.UserId).ToHashSet();
+
+                var friendships = await _context.Friendships
+                    .Include(f => f.User)
+                    .Include(f => f.Friend)
+                    .Where(f => f.IsAccepted && (f.UserId == userId || f.FriendId == userId))
+                    .ToListAsync();
+
+                vm.AvailableFriends = friendships
+                    .Select(f => f.UserId == userId ? f.Friend : f.User)
+                    .Where(u => !participantUserIds.Contains(u.Id))
+                    .Select(u => new FriendInviteOption
+                    {
+                        UserId = u.Id,
+                        DisplayName = string.IsNullOrWhiteSpace(u.FullName) ? (u.Email ?? "Student") : u.FullName,
+                        Email = u.Email ?? ""
+                    })
+                    .ToList();
+            }
+
             return View(vm);
         }
 
@@ -204,6 +224,46 @@ namespace EduSathi.Controllers
             }
 
             return RedirectToAction(nameof(RoomQuiz), new { roomCode = room.Code });
+        }
+
+        // Integrated friend invite action handler
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InviteFriendToRoom(string roomCode, string friendUserId)
+        {
+            var room = await LoadRoomByCodeAsync(roomCode);
+            if (room == null) return NotFound();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var me = room.Participants.FirstOrDefault(p => p.UserId == userId);
+            if (me == null || !me.IsHost) return Forbid();
+
+            var alreadyIn = room.Participants.Any(p => p.UserId == friendUserId);
+            if (!alreadyIn)
+            {
+                var friendUser = await _userManager.FindByIdAsync(friendUserId);
+                if (friendUser != null)
+                {
+                    var displayName = string.IsNullOrWhiteSpace(friendUser.FullName) ? (friendUser.Email ?? "Student") : friendUser.FullName;
+
+                    _context.QuizRoomParticipants.Add(new QuizRoomParticipant
+                    {
+                        QuizRoomId = room.Id,
+                        UserId = friendUserId,
+                        DisplayName = displayName,
+                        IsHost = false,
+                        JoinedAt = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync();
+
+                    if (!string.IsNullOrEmpty(room.Code))
+                    {
+                        await _hub.Clients.Group(room.Code).SendAsync("ParticipantJoined", new { displayName });
+                    }
+                }
+            }
+
+            return RedirectToAction(nameof(RoomLobby), new { roomCode = room.Code });
         }
 
         public async Task<IActionResult> RoomQuiz(string? roomCode, int? id)
@@ -345,7 +405,7 @@ namespace EduSathi.Controllers
                 return await _context.QuizRooms
                     .Include(r => r.Participants)
                     .Include(r => r.Documents)
-                    .FirstOrDefaultAsync(r => r.Id == id.Value && r.Category == RoomCategory.Solo && r.CreatorUserId == userId);
+                    .FirstOrDefaultAsync(r => r.Id == id.Value && r.CreatorUserId == userId);
             }
 
             return null;
@@ -410,7 +470,7 @@ namespace EduSathi.Controllers
             return Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
         }
 
-        private async Task<UploadedDocument> CreateSeededDocumentAsync(string userId, Microsoft.AspNetCore.Http.IFormFile file)
+        private async Task<UploadedDocument> CreateSeededDocumentAsync(string userId, Microsoft.AspNetCore.Http.IFormFile file, int questionCount)
         {
             string uploadsFolder = Path.Combine(Path.GetTempPath(), "EduSathiUploads");
             Directory.CreateDirectory(uploadsFolder);
@@ -444,15 +504,13 @@ namespace EduSathi.Controllers
                 extractedText = extractedText.Substring(0, 30000);
             }
 
-            string aiSummary = await _summaryService.GenerateSummaryAsync(extractedText);
-
             var doc = new UploadedDocument
             {
                 UserId = userId,
                 FileName = file.FileName,
                 FilePath = filePath,
                 ExtractedText = extractedText,
-                Summary = aiSummary,
+                Summary = string.Empty,
                 UploadedAt = DateTime.UtcNow
             };
 
@@ -463,11 +521,19 @@ namespace EduSathi.Controllers
             {
                 try
                 {
-                    var jsonResponse = await _mcqService.GenerateMcqsAsync(extractedText, (int)level);
+                    var jsonResponse = await _mcqService.GenerateMcqsAsync(extractedText, (int)level, questionCount);
 
                     if (!string.IsNullOrEmpty(jsonResponse))
                     {
-                        var generatedQuestions = JsonSerializer.Deserialize<List<Question>>(jsonResponse, new JsonSerializerOptions
+                        string cleaned = jsonResponse.Trim();
+
+                        var fenceMatch = Regex.Match(cleaned, @"```(?:json)?\s*([\s\S]*?)```", RegexOptions.IgnoreCase);
+                        if (fenceMatch.Success)
+                        {
+                            cleaned = fenceMatch.Groups[1].Value.Trim();
+                        }
+
+                        var generatedQuestions = JsonSerializer.Deserialize<List<Question>>(cleaned, new JsonSerializerOptions
                         {
                             PropertyNameCaseInsensitive = true
                         });
@@ -518,8 +584,6 @@ namespace EduSathi.Controllers
             return View(user);
         }
 
-        // GET: /Questionnaires/RoomInvites
-        // GET: /Questionnaires/RoomInvites
         public async Task<IActionResult> RoomInvites()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

@@ -52,8 +52,37 @@
         }
     </div>
 
+    @if (Model.IsHost && Model.AvailableFriends.Any())
+    {
+        <div id="inviteFriendsPanel" style="display:none;margin-top:8px;">
+            <div class="or-divider">&nbsp;</div>
+            <h3 style="margin-bottom:14px;"><i class="bi bi-people-fill" style="color:var(--primary);"></i> Invite Friends</h3>
+            @foreach (var f in Model.AvailableFriends)
+            {
+                <div class="list-item" style="margin-bottom:10px;">
+                    <div class="icon-circle purple"><i class="bi bi-person-fill"></i></div>
+                    <div class="info">
+                        <div class="title">@f.DisplayName</div>
+                        <div class="meta">@f.Email</div>
+                    </div>
+                    <form asp-action="InviteFriendToRoom" method="post">
+                        <input type="hidden" name="roomCode" value="@Model.Code" />
+                        <input type="hidden" name="friendUserId" value="@f.UserId" />
+                        <button type="submit" class="chip-btn blue"><i class="bi bi-person-plus-fill"></i> Invite</button>
+                    </form>
+                </div>
+            }
+        </div>
+    }
+
     <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;">
         <a class="btn btn-secondary" asp-action="Index">Back to Hub</a>
+        @if (Model.IsHost && Model.AvailableFriends.Any())
+        {
+            <button type="button" id="toggleInviteFriends" class="btn btn-secondary">
+                <i class="bi bi-person-plus-fill"></i> Invite Friends
+            </button>
+        }
         @if (Model.IsHost)
         {
             <form asp-action="StartRoom" method="post">
@@ -71,4 +100,17 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
     <script src="~/js/room-live.js" asp-append-version="true"></script>
+    @if (Model.IsHost && Model.AvailableFriends.Any())
+    {
+        <script>
+            (function () {
+                var btn = document.getElementById('toggleInviteFriends');
+                var panel = document.getElementById('inviteFriendsPanel');
+                if (!btn || !panel) return;
+                btn.addEventListener('click', function () {
+                    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                });
+            })();
+        </script>
+    }
 }

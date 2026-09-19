@@ -1,21 +1,63 @@
 ﻿@*
     Views/Account/Login.cshtml — COMPLETE REPLACEMENT.
 
-    Restyled from Login.aspx. The form contract is UNCHANGED from your existing
-    Login.cshtml, so AccountController.Login needs no edit:
+    Same form contract as before, so AccountController.Login needs no edit:
 
       action           -> Account/Login  with asp-route-returnUrl="@ViewData["ReturnUrl"]"
       input names      -> email, password
       validation       -> asp-validation-summary="All"  (shows "Invalid login attempt.")
       autocomplete     -> username / current-password, kept for password managers
 
-    Only the markup and classes changed. The "Register as a new user" link keeps
-    pointing at Account/Register.
+    NEW: an eye button inside both fields.
+      Password -> starts hidden (dots). Click the eye to show it, click again to hide it.
+      Email    -> starts visible. Click the eye-slash to hide it (dots), click again to show it.
+                  It is hidden with CSS only (the field stays type="text"), so autofill and
+                  password managers keep working and the value posted is unchanged.
+    The buttons only appear when JavaScript runs, so the form still works without it.
+    The "Register as a new user" link still points at Account/Register.
 *@
 @{
     ViewData["Title"] = "Login";
     Layout = "_PublicLayout";
 }
+
+<style>
+    .fld-wrap { position: relative; }
+
+    .fld-wrap .auth-input {
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 0;
+        padding-right: 50px; /* room for the eye button */
+    }
+
+    .fld-toggle {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: #6b7488;
+        font-size: 17px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color .15s ease, color .15s ease;
+    }
+
+    .fld-toggle:hover { background: rgba(124, 92, 245, .10); color: #5a3fd8; }
+    .fld-toggle:focus-visible { outline: 2px solid #7c5cf5; outline-offset: 1px; }
+    .fld-toggle[hidden] { display: none; }
+
+    /* hides the typed email as dots without changing the input type */
+    .is-masked { -webkit-text-security: disc; text-security: disc; }
+</style>
 
 <section class="auth-section">
     <div class="card auth-card">
@@ -28,13 +70,27 @@
         <form method="post" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]">
             <div asp-validation-summary="All" class="field-errors"></div>
 
-            <div class="field-label">Email / Username</div>
-            <input name="email" class="auth-input" autocomplete="username" aria-required="true"
-                   placeholder="you@@example.com" required />
+            <div class="field-label" id="loginEmailLabel">Email / Username</div>
+            <div class="fld-wrap">
+                <input id="loginEmail" name="email" class="auth-input" autocomplete="username"
+                       autocapitalize="none" spellcheck="false" aria-labelledby="loginEmailLabel"
+                       aria-required="true" placeholder="you@@example.com" required />
+                <button type="button" class="fld-toggle" id="toggleEmail" hidden
+                        aria-label="Hide email" title="Hide email" aria-controls="loginEmail">
+                    <i class="bi bi-eye-slash" aria-hidden="true"></i>
+                </button>
+            </div>
 
-            <div class="field-label" style="margin-top:14px;">Password</div>
-            <input name="password" type="password" class="auth-input" autocomplete="current-password"
-                   aria-required="true" placeholder="Enter your password" required />
+            <div class="field-label" id="loginPasswordLabel" style="margin-top:14px;">Password</div>
+            <div class="fld-wrap">
+                <input id="loginPassword" name="password" type="password" class="auth-input"
+                       autocomplete="current-password" aria-labelledby="loginPasswordLabel"
+                       aria-required="true" placeholder="Enter your password" required />
+                <button type="button" class="fld-toggle" id="togglePassword" hidden
+                        aria-label="Show password" title="Show password" aria-controls="loginPassword">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+            </div>
 
             <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:18px;">Log In</button>
         </form>
@@ -44,3 +100,47 @@
         </p>
     </div>
 </section>
+
+<script>
+    (function () {
+        var email = document.getElementById('loginEmail');
+        var emailBtn = document.getElementById('toggleEmail');
+        var pw = document.getElementById('loginPassword');
+        var pwBtn = document.getElementById('togglePassword');
+
+        // eye = "click to show", eye-slash = "click to hide"
+        function setIcon(btn, isEye) {
+            btn.firstElementChild.className = 'bi ' + (isEye ? 'bi-eye' : 'bi-eye-slash');
+        }
+
+        function setLabel(btn, text) {
+            btn.setAttribute('aria-label', text);
+            btn.title = text;
+        }
+
+        // Password: hidden by default, click to show
+        if (pw && pwBtn) {
+            pwBtn.hidden = false;
+            pwBtn.addEventListener('click', function () {
+                var show = pw.type === 'password';
+                pw.type = show ? 'text' : 'password';
+                setIcon(pwBtn, !show);
+                setLabel(pwBtn, show ? 'Hide password' : 'Show password');
+            });
+        }
+
+        // Email: visible by default, click to hide (only where the browser can mask text with CSS)
+        var canMask = window.CSS && CSS.supports &&
+            (CSS.supports('-webkit-text-security', 'disc') || CSS.supports('text-security', 'disc'));
+
+        if (email && emailBtn && canMask) {
+            emailBtn.hidden = false;
+            emailBtn.addEventListener('click', function () {
+                var hide = !email.classList.contains('is-masked');
+                email.classList.toggle('is-masked', hide);
+                setIcon(emailBtn, hide);
+                setLabel(emailBtn, hide ? 'Show email' : 'Hide email');
+            });
+        }
+    })();
+</script>

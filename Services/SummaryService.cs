@@ -68,6 +68,12 @@ namespace EduSathi.Services
                 return "The AI summary feature is temporarily unavailable due to high server load. Please try again later.";
             }
 
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                return $"API Error ({response.StatusCode}): {errorContent}";
+            }
+
             var jsonResponse = await response.Content.ReadAsStringAsync();
 
             try

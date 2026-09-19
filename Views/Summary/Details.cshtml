@@ -1,0 +1,95 @@
+﻿@model EduSathi.Models.UploadedDocument
+
+@{
+    ViewData["Title"] = "Study Summary - " + Model.FileName;
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div>
+        <a asp-action="Index" class="btn-back" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--text-muted); text-decoration:none; margin-bottom:8px;">
+            <i class="bi bi-arrow-left"></i> Back to Upload
+        </a>
+        <h1>Study Guide &amp; Summary</h1>
+        <p class="subtitle">Document: <strong>@Model.FileName</strong> &bull; Uploaded on @Model.UploadedAt.ToLocalTime().ToString("MMM dd, yyyy")</p>
+    </div>
+    <div>
+        <a asp-controller="Quiz" asp-action="QuizSession" asp-route-id="@Model.Id" class="btn btn-primary">
+            <i class="bi bi-play-fill"></i> Launch Practice Quiz &rarr;
+        </a>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:3rem; background:#fff; color:#0b1226;">
+    <!-- Rendered Markdown HTML will be placed here -->
+    <div id="summary-content" class="markdown-body">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Formatting your study guide...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Raw markdown stored in a hidden container for JavaScript to parse -->
+<textarea id="raw-markdown" style="display:none;">@Model.Summary</textarea>
+
+@section Scripts {
+    <!-- Marked.js to convert Markdown to clean HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const rawMarkdown = document.getElementById("raw-markdown").value;
+            const summaryContainer = document.getElementById("summary-content");
+
+            if (rawMarkdown && rawMarkdown.trim() !== "") {
+                summaryContainer.innerHTML = marked.parse(rawMarkdown);
+            } else {
+                summaryContainer.innerHTML = "<div class='alert alert-warning' style='background:rgba(255,193,7,0.1); border:1px solid rgba(255,193,7,0.3); color:#856404; padding:12px; border-radius:10px;'>No summary content available for this document.</div>";
+            }
+        });
+    </script>
+    <style>
+        .markdown-body {
+            color: #26304a; /* Dark slate text for high contrast on white card */
+            font-family: inherit;
+            line-height: 1.7;
+            font-size: 15px;
+        }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+            margin-top: 1.75rem;
+            margin-bottom: 0.75rem;
+            font-weight: 700;
+            color: #0b1226; /* Deep dark heading color */
+        }
+        .markdown-body p {
+            margin-bottom: 1rem;
+            color: #3b4663;
+        }
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            color: #3b4663;
+        }
+        .markdown-body li {
+            margin-bottom: 0.4rem;
+        }
+        .markdown-body strong {
+            color: #0b1226;
+        }
+        .markdown-body pre {
+            background-color: #f7f8fd;
+            border: 1px solid #e1e6f0;
+            border-radius: 10px;
+            padding: 1rem;
+            overflow-x: auto;
+            color: #0b1226;
+        }
+        .markdown-body code {
+            background-color: #f0f3ff;
+            color: #5a3fd8;
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            font-size: 0.875em;
+        }
+    </style>
+}

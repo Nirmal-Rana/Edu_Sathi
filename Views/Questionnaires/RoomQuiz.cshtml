@@ -19,7 +19,7 @@
 <div class="row">
     <!-- Quiz Questions Column -->
     <div class="col-lg-8">
-        <form asp-action="RoomQuizSubmit" method="post">
+        <form asp-action="RoomQuiz" method="post">
             <input type="hidden" name="roomCode" value="@Model.RoomCode" />
             <input type="hidden" name="id" value="@Model.RoomId" />
 
@@ -29,10 +29,10 @@
                 var qNum = i + 1;
                 var picked = Model.Answers != null && Model.Answers.ContainsKey(q.Id) ? Model.Answers[q.Id] : null;
 
-                <div class="card mb-4 p-4 shadow-sm border-0 bg-white">
-                    <h5 class="fw-bold mb-4">@qNum. @q.QuestionText</h5>
+                <div class="card mb-4 p-4 shadow-sm border-0 bg-white" style="color: #0b1226;">
+                    <h5 class="fw-bold mb-4" style="color: #0b1226; line-height: 1.5;">@qNum. @q.QuestionText</h5>
                     
-                    <div class="d-flex flex-column gap-3">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
                         @foreach (var opt in new[] { "A", "B", "C", "D" })
                         {
                             var optText = opt == "A" ? q.OptionA : opt == "B" ? q.OptionB : opt == "C" ? q.OptionC : q.OptionD;
@@ -40,23 +40,26 @@
                             var isCorrect = Model.IsSubmitted && q.CorrectOption == opt;
                             var isWrong = Model.IsSubmitted && isChecked && !isCorrect;
                             
-                            var bgClass = "";
+                            var bgStyle = "background: #f8f9fc; border: 1px solid #e1e6f0; color: #26304a;";
                             if (Model.IsSubmitted) {
-                                if (isCorrect) bgClass = "bg-success-subtle border-success text-success";
-                                else if (isWrong) bgClass = "bg-danger-subtle border-danger text-danger";
+                                if (isCorrect) bgStyle = "background: #e6f9f0; border: 1px solid #28a745; color: #155724;";
+                                else if (isWrong) bgStyle = "background: #fdecef; border: 1px solid #dc3545; color: #721c24;";
                             }
 
-                            <label class="p-3 border rounded @bgClass" style="cursor: pointer;">
-                                <input type="radio" name="answers[@q.Id]" value="@opt" @(isChecked ? "checked" : "") @(Model.IsSubmitted ? "disabled" : "") class="me-2 form-check-input" />
-                                <strong class="me-1">@opt.</strong> @optText
+                            <label style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 10px; cursor: pointer; @bgStyle transition: all 0.15s ease;">
+                                <input type="radio" name="answers[@q.Id]" value="@opt" @(isChecked ? "checked" : "") @(Model.IsSubmitted ? "disabled" : "") style="margin-top: 3px; accent-color: #7c5cf5;" />
+                                <div>
+                                    <strong style="margin-right: 4px;">@opt.</strong> @optText
+                                </div>
                             </label>
                         }
                     </div>
 
                     @if (Model.IsSubmitted)
                     {
-                        <div class="mt-4 p-3 bg-light rounded text-muted border">
-                            <strong class="text-dark"><i class="bi bi-info-circle text-primary"></i> Explanation:</strong> @q.Explanation
+                        <!-- Added margin-top: 14px for proper breathing room -->
+                        <div style="margin-top: 14px; padding: 14px; background: #f8f9fc; border: 1px solid #e1e6f0; border-radius: 10px; color: #26304a; line-height: 1.5;">
+                            <strong style="color: #0b1226;"><i class="bi bi-info-circle text-primary"></i> Explanation:</strong> @q.Explanation
                         </div>
                     }
                 </div>
@@ -64,7 +67,7 @@
 
             @if (!Model.IsSubmitted)
             {
-                <button type="submit" class="btn btn-primary btn-lg w-100 mb-5 shadow-sm">
+                <button type="submit" class="btn btn-primary btn-lg w-100 mb-5 shadow-sm" style="background: linear-gradient(90deg, #5d5cf5, #9463f4); border: none; border-radius: 12px; height: 48px; font-weight: 700;">
                     <i class="bi bi-check2-circle"></i> Submit Quiz
                 </button>
             }
@@ -75,19 +78,19 @@
     <div class="col-lg-4">
         @if (Model.IsSubmitted)
         {
-            <div class="card p-4 shadow-sm mb-4 text-center border-0 bg-white">
-                <h5 class="fw-bold text-muted text-uppercase mb-2">Your Score</h5>
+            <div class="card p-4 shadow-sm mb-4 text-center border-0 bg-white" style="color: #0b1226;">
+                <h5 class="fw-bold text-muted text-uppercase mb-2" style="font-size: 13px;">Your Score</h5>
                 <h1 class="text-primary display-4 fw-bold mb-0">@Model.CorrectCount <span class="fs-4 text-muted">/ @Model.Total</span></h1>
             </div>
 
             @if (Model.Category == EduSathi.Models.RoomCategory.Global && Model.Leaderboard != null)
             {
-                <div class="card p-4 shadow-sm border-0 bg-white">
+                <div class="card p-4 shadow-sm border-0 bg-white" style="color: #0b1226;">
                     <h5 class="fw-bold mb-3"><i class="bi bi-trophy-fill text-warning"></i> Live Leaderboard</h5>
                     <ul class="list-group list-group-flush" id="leaderboard-list">
                         @foreach (var entry in Model.Leaderboard)
                         {
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3" style="border-bottom: 1px solid #e1e6f0;">
                                 <div>
                                     <span class="fw-semibold text-dark">@entry.DisplayName</span>
                                     @if(entry.IsHost) { <span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">Host</span> }
@@ -101,9 +104,9 @@
         }
         else
         {
-            <div class="card p-4 shadow-sm sticky-top border-0 bg-white" style="top: 20px;">
+            <div class="card p-4 shadow-sm sticky-top border-0 bg-white" style="top: 20px; color: #0b1226;">
                 <h5 class="fw-bold mb-3"><i class="bi bi-info-square-fill text-primary"></i> Quiz Details</h5>
-                <hr class="mt-0 mb-3" />
+                <hr class="mt-0 mb-3" style="border-color: #e1e6f0;" />
                 <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted">Questions</span>
                     <strong class="text-dark">@Model.Total</strong>

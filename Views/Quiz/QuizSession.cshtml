@@ -7,6 +7,14 @@
 <div class="container mt-4 mb-5">
     <h2>Quiz: @Model.FileName</h2>
 
+    @if (!string.IsNullOrWhiteSpace(Model.Summary))
+    {
+        <div class="card mb-4 p-3 shadow-sm">
+            <h4>Summary</h4>
+            <div style="white-space: pre-wrap;">@Model.Summary</div>
+        </div>
+    }
+
     <hr class="my-4" />
 
     <h3 class="mb-4">Practice Quiz</h3>

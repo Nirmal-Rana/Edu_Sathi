@@ -11,6 +11,8 @@ namespace EduSathi.ViewModels
     {
         public string Name { get; set; } = string.Empty;
 
+        public int QuestionCount { get; set; } = 10;
+
         // Multiple PDFs can be dropped in from the device at once.
         public List<IFormFile>? NewPdfFiles { get; set; }
 
@@ -31,6 +33,18 @@ namespace EduSathi.ViewModels
         public bool IsHost { get; set; }
         public bool IsStarted { get; set; }
         public List<QuizRoomParticipant> Participants { get; set; } = new List<QuizRoomParticipant>();
+
+        // Host's accepted friends who aren't already in this room - populated in
+        // QuestionnairesController.RoomLobby(), used by the "Invite Friends" panel.
+        public List<FriendInviteOption> AvailableFriends { get; set; } = new List<FriendInviteOption>();
+    }
+
+    /// <summary>A friend the host can invite directly into a room, from the Friendship table.</summary>
+    public class FriendInviteOption
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
     }
 
     /// <summary>

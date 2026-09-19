@@ -575,9 +575,8 @@ button {
     }
 
     .chip-btn.green {
-         background: var(--green-soft-bg);
-         color: var(--green);
-        
+        background: var(--green-soft-bg);
+        color: var(--green);
     }
 
 .history-item-stack {

@@ -22,10 +22,18 @@ namespace EduSathi.Services
             _apiUrl = config["Gemini:Url"] ?? throw new ArgumentNullException("API URL is missing");
         }
 
-        public async Task<string> GenerateMcqsAsync(string extractedText, int questionCount)
+        public async Task<string> GenerateMcqsAsync(string extractedText, int level, int questionCount = 10)
         {
+            var levelName = level switch
+            {
+                1 => "Basic",
+                2 => "Medium",
+                3 => "Hard",
+                _ => "Medium"
+            };
+
             var prompt = $@"
-    You are an expert educator. Based on the following text, generate exactly {questionCount} multiple-choice questions (MCQs).
+    You are an expert educator. Based on the following text, generate exactly {questionCount} multiple-choice questions (MCQs) at a **{levelName}** difficulty level.
 
     Respond with ONLY a raw JSON array (no markdown code fences, no commentary, no extra text before or after).
     Each element must be an object with exactly these keys:

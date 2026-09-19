@@ -6,6 +6,14 @@
     var controller = (ViewContext.RouteData.Values["controller"] as string ?? "").ToLowerInvariant();
     var action = (ViewContext.RouteData.Values["action"] as string ?? "").ToLowerInvariant();
 
+    var isHome = controller == "exam" && action == "index";
+    // Fixed: Now checks for QuestionnairesController -> Profile action
+    var isProfile = controller == "questionnaires" && action == "profile";
+    var isFriends = controller == "friends";
+    var isRoomInvites = controller == "questionnaires" && action == "roominvites";
+    var isQuestionnaires = controller == "questionnaires" && action != "roominvites" && action != "profile";
+    var isHistory = controller == "exam" && action == "history";
+
     string displayName = User.Identity?.Name ?? "";
     if (SignInManager.IsSignedIn(User))
     {
@@ -23,7 +31,10 @@
         initials += char.ToUpperInvariant(part[0]);
     }
     if (initials.Length == 0) { initials = "?"; }
-}<!DOCTYPE html><html lang="en"><head>
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - EduSathi</title>
@@ -33,7 +44,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <link rel="stylesheet" href="~/css/edusathi.css" asp-append-version="true" />
-    @await RenderSectionAsync("Head", required: false)</head><body>
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body>
     <div class="app-shell">
 
         <aside class="sidebar">
@@ -42,40 +55,36 @@
                 <div class="logo-text">EduSathi</div>
             </div>
 
-            <hr class="text-muted mx-3" />
-
-            <!-- Sidebar Links with Dynamic Active Highlighting -->
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Exam" ? "active" : "")" asp-controller="Exam" asp-action="Index">
-                        <i class="bi bi-speedometer2"></i> Dashboard
+            <ul class="nav-list">
+                <li>
+                    <a class="nav-item @(isHome ? "active" : "")" asp-controller="Exam" asp-action="Index">
+                        <i class="bi bi-house-door-fill"></i><span>Home</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <!-- Ensure controller matches your actual class name (Questionnaires vs Questionaries) -->
-                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Profile" ? "active" : "")" asp-controller="Questionnaires" asp-action="Profile">
-                        <i class="bi bi-person-badge"></i> Profile
+                <li>
+                    <!-- Fixed: Route updated to Questionnaires/Profile -->
+                    <a class="nav-item @(isProfile ? "active" : "")" asp-controller="Questionnaires" asp-action="Profile">
+                        <i class="bi bi-person-fill"></i><span>Profile</span>
                     </a>
                 </li>
-
-                <li class="nav-item">
-                    <a class="nav-link @(Context.Request.Path.StartsWithSegments("/Friends") ? "active" : "")" asp-controller="Friends" asp-action="Index">
-                        <i class="bi bi-people-fill me-2"></i> Friends
+                <li>
+                    <a class="nav-item @(isFriends ? "active" : "")" asp-controller="Friends" asp-action="Index">
+                        <i class="bi bi-people-fill"></i><span>Friends</span>
                     </a>
                 </li>
-                <li class="nav-item mb-2">
-                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "RoomInvites" ? "active" : "")" asp-controller="Questionnaires" asp-action="RoomInvites">
-                        <i class="bi bi-bell-fill text-warning me-2"></i> Room Invites
+                <li>
+                    <a class="nav-item @(isRoomInvites ? "active" : "")" asp-controller="Questionnaires" asp-action="RoomInvites">
+                        <i class="bi bi-bell-fill"></i><span>Room Invites</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link @(controller == "questionnaires" && action == "index" ? "active" : "")" asp-controller="Questionnaires" asp-action="Index">
-                        <i class="bi bi-collection-fill"></i> Questionnaires
+                <li>
+                    <a class="nav-item @(isQuestionnaires ? "active" : "")" asp-controller="Questionnaires" asp-action="Index">
+                        <i class="bi bi-patch-question-fill"></i><span>Questionnaires</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link @(action == "history" ? "active" : "")" asp-controller="Exam" asp-action="History">
-                        <i class="bi bi-clock-history"></i> History
+                <li>
+                    <a class="nav-item @(isHistory ? "active" : "")" asp-controller="Exam" asp-action="History">
+                        <i class="bi bi-clock-history"></i><span>History</span>
                     </a>
                 </li>
             </ul>
@@ -83,6 +92,7 @@
             <div class="sidebar-footer">
                 @if (SignInManager.IsSignedIn(User))
                 {
+                    <!-- Fixed: Route updated to Questionnaires/Profile -->
                     <a class="sidebar-user" asp-controller="Questionnaires" asp-action="Profile">
                         <div class="avatar">@initials</div>
                         <div>
@@ -101,11 +111,12 @@
             </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <main>
+        <main class="main-content">
             @RenderBody()
         </main>
     </div>
 
     <script src="~/js/edusathi.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)</body></html>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

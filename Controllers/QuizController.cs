@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,20 +11,24 @@ using Microsoft.EntityFrameworkCore;
 using EduSathi.Data;
 using EduSathi.Models;
 using EduSathi.ViewModels;
+using EduSathi.Services;
 
 namespace EduSathi.Controllers
 {
     // Single responsibility: present a solo quiz for a document and grade it
     // once submitted. Does not touch PDF upload, text extraction, or summary
-    // generation — that belongs to SummaryController.
+    // generation — that belongs to SummaryController. It does own making sure
+    // the quiz itself has questions, since that's part of "presenting the quiz".
     [Authorize]
     public class QuizController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly McqService _mcqService;
 
-        public QuizController(ApplicationDbContext context)
+        public QuizController(ApplicationDbContext context, McqService mcqService)
         {
             _context = context;
+            _mcqService = mcqService;
         }
 
         // GET: /Quiz/QuizSession/{id}
@@ -34,6 +41,13 @@ namespace EduSathi.Controllers
 
             if (document == null) return NotFound();
 
+            // If no questions exist yet for this document, generate them now.
+            // This only ever calls McqService — it never touches the summary.
+            if (!document.Questions.Any())
+            {
+                await GenerateQuestionsAsync(document);
+            }
+
             var viewModel = new QuizSessionViewModel
             {
                 DocumentId = document.Id,
@@ -43,6 +57,60 @@ namespace EduSathi.Controllers
             };
 
             return View(viewModel);
+        }
+
+        private async Task GenerateQuestionsAsync(UploadedDocument document)
+        {
+            foreach (var level in new[] { QuestionLevel.Basic, QuestionLevel.Medium, QuestionLevel.Hard })
+            {
+                try
+                {
+                    var jsonResponse = await _mcqService.GenerateMcqsAsync(document.ExtractedText, (int)level);
+
+                    if (!string.IsNullOrEmpty(jsonResponse))
+                    {
+                        string cleaned = jsonResponse.Trim();
+
+                        // Gemini sometimes wraps its JSON in ```json ... ``` fences even when
+                        // told not to; strip them before deserializing.
+                        var fenceMatch = Regex.Match(cleaned, @"```(?:json)?\s*([\s\S]*?)```", RegexOptions.IgnoreCase);
+                        if (fenceMatch.Success)
+                        {
+                            cleaned = fenceMatch.Groups[1].Value.Trim();
+                        }
+
+                        var generatedQuestions = JsonSerializer.Deserialize<List<Question>>(cleaned, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (generatedQuestions != null)
+                        {
+                            foreach (var q in generatedQuestions)
+                            {
+                                document.Questions.Add(new Question
+                                {
+                                    UploadedDocumentId = document.Id,
+                                    QuestionText = q.QuestionText,
+                                    OptionA = q.OptionA,
+                                    OptionB = q.OptionB,
+                                    OptionC = q.OptionC,
+                                    OptionD = q.OptionD,
+                                    CorrectOption = q.CorrectOption,
+                                    Level = level,
+                                    Explanation = q.Explanation
+                                });
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error parsing questions for {level}: {ex.Message}");
+                }
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         // POST: /Quiz/SubmitQuiz

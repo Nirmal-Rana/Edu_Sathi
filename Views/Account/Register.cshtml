@@ -8,6 +8,11 @@
       input names  -> fullName, contact, email, password, confirmPassword
       validation   -> asp-validation-summary="All"  (password-mismatch + Identity errors)
 
+    Show/hide password: purely client-side. Each password input is wrapped in
+    .pw-field with a type="button" toggle that flips the input between
+    type="password" and type="text". Nothing changes in what gets posted.
+    Uses Bootstrap Icons (bi-eye / bi-eye-slash), same icon set as the header above.
+
     NOTE — the "Grade / Level" dropdown from Signup.aspx is NOT here. ApplicationUser
     has FullName and ContactNumber only, and Register() binds exactly five fields.
     Adding Grade would mean a model change, a migration and a controller signature
@@ -22,6 +27,46 @@
     ViewData["Title"] = "Register";
     Layout = "_PublicLayout";
 }
+
+<style>
+    /* Password show/hide — scoped to .pw-field so nothing else is affected */
+    .pw-field {
+        position: relative;
+    }
+
+    .pw-field .auth-input {
+        padding-right: 44px; /* keep typed text clear of the toggle */
+    }
+
+    .pw-toggle {
+        position: absolute;
+        top: 50%;
+        right: 6px;
+        transform: translateY(-50%);
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: #6b7280;
+        font-size: 1.1rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .pw-toggle:hover {
+        color: #111827;
+    }
+
+    .pw-toggle:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 1px;
+    }
+</style>
 
 <section class="auth-section">
     <div class="card auth-card">
@@ -45,12 +90,22 @@
                    placeholder="you@@example.com" required />
 
             <div class="field-label" style="margin-top:14px;">Password</div>
-            <input name="password" type="password" class="auth-input" autocomplete="new-password"
-                   placeholder="Create a password" required />
+            <div class="pw-field">
+                <input name="password" type="password" class="auth-input" autocomplete="new-password"
+                       placeholder="Create a password" required />
+                <button type="button" class="pw-toggle" aria-label="Show password" aria-pressed="false">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
 
             <div class="field-label" style="margin-top:14px;">Confirm password</div>
-            <input name="confirmPassword" type="password" class="auth-input" autocomplete="new-password"
-                   placeholder="Repeat your password" required />
+            <div class="pw-field">
+                <input name="confirmPassword" type="password" class="auth-input" autocomplete="new-password"
+                       placeholder="Repeat your password" required />
+                <button type="button" class="pw-toggle" aria-label="Show password" aria-pressed="false">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
 
             <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:18px;">Create Account</button>
         </form>
@@ -60,3 +115,22 @@
         </p>
     </div>
 </section>
+
+<script>
+    (function () {
+        document.querySelectorAll('.pw-field').forEach(function (field) {
+            var input = field.querySelector('input');
+            var toggle = field.querySelector('.pw-toggle');
+            var icon = toggle.querySelector('i');
+
+            toggle.addEventListener('click', function () {
+                var reveal = input.type === 'password';
+                input.type = reveal ? 'text' : 'password';
+                icon.className = reveal ? 'bi bi-eye-slash' : 'bi bi-eye';
+                toggle.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+                toggle.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+                input.focus();
+            });
+        });
+    })();
+</script>

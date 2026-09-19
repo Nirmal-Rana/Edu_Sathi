@@ -15,10 +15,6 @@ using UglyToad.PdfPig;
 
 namespace EduSathi.Controllers
 {
-    // Single responsibility: accept a PDF (new upload or previously stored),
-    // extract its text, generate an AI summary, and persist the resulting
-    // UploadedDocument. Does not know anything about quiz questions, grading,
-    // or quiz history — that belongs to QuizController.
     [Authorize]
     public class SummaryController : Controller
     {
@@ -60,6 +56,23 @@ namespace EduSathi.Controllers
             if (model.SelectedExistingDocumentId.HasValue)
             {
                 targetDocumentId = model.SelectedExistingDocumentId.Value;
+
+                var existingDoc = await _context.UploadedDocuments
+                    .FirstOrDefaultAsync(d => d.Id == targetDocumentId && d.UserId == userId);
+
+                if (existingDoc == null)
+                {
+                    ModelState.AddModelError("", "Selected document not found.");
+                    model.PreviousDocuments = await _context.UploadedDocuments.Where(d => d.UserId == userId).ToListAsync();
+                    return View("Index", model);
+                }
+
+                // If summary wasn't generated yet for this existing doc, generate it now
+                if (string.IsNullOrWhiteSpace(existingDoc.Summary))
+                {
+                    existingDoc.Summary = await _summaryService.GenerateSummaryAsync(existingDoc.ExtractedText);
+                    await _context.SaveChangesAsync();
+                }
             }
             else if (model.NewPdfFile != null && model.NewPdfFile.Length > 0)
             {
@@ -82,12 +95,12 @@ namespace EduSathi.Controllers
                     }
                 }
 
-                if (extractedText.Length > 30000)
+                if (extractedText.Length > 20000)
                 {
-                    extractedText = extractedText.Substring(0, 30000);
+                    extractedText = extractedText.Substring(0, 20000);
                 }
 
-                // Generate comprehensive learning summary only
+                // Generate AI summary
                 string aiSummary = await _summaryService.GenerateSummaryAsync(extractedText);
 
                 var newDoc = new UploadedDocument
@@ -112,8 +125,23 @@ namespace EduSathi.Controllers
                 return View("Index", model);
             }
 
-            // Summary's job ends here — hand off to QuizController for the quiz experience.
-            return RedirectToAction("QuizSession", "Quiz", new { id = targetDocumentId });
+            // REDIRECT TO SUMMARY PAGE (Not Quiz)
+            return RedirectToAction("Details", new { id = targetDocumentId });
+        }
+
+        // GET: /Summary/Details/{id}
+        public async Task<IActionResult> Details(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var doc = await _context.UploadedDocuments
+                .FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId);
+
+            if (doc == null)
+            {
+                return NotFound();
+            }
+
+            return View(doc);
         }
     }
 }
