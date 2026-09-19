@@ -574,6 +574,12 @@ button {
         color: var(--orange);
     }
 
+    .chip-btn.green {
+         background: var(--green-soft-bg);
+         color: var(--green);
+        
+    }
+
 .history-item-stack {
     display: flex;
     flex-direction: column;

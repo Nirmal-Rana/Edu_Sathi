@@ -1,0 +1,74 @@
+﻿@*
+    Views/Questionnaires/RoomLobby.cshtml — NEW FILE.
+
+    Live updates come from Hubs/RoomHub.cs over /hubs/room:
+      - ParticipantJoined -> append a row to #participantsList
+      - RoomStarted       -> everyone in the lobby gets redirected to RoomQuiz
+    See wwwroot/js/room-live.js for the client-side wiring.
+*@
+@model EduSathi.ViewModels.RoomLobbyViewModel
+
+@{
+    ViewData["Title"] = "Room Lobby";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Room Lobby</h1>
+        <p class="subtitle">@Model.Name</p>
+    </div>
+    <a class="btn-back" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="card" data-room-code="@Model.Code">
+    <div class="code-display">
+        <div class="code-label">Shareable Room Code</div>
+        <div class="code-value" id="roomCodeValue">@Model.Code</div>
+        <div class="code-meta">Share this code with your peers so they can join your live room.</div>
+        <div class="code-actions">
+            <button type="button" class="btn btn-secondary" data-copy-target="roomCodeValue">
+                <i class="bi bi-clipboard"></i> Copy Code
+            </button>
+        </div>
+    </div>
+
+    <div class="or-divider">&nbsp;</div>
+
+    <h3 style="margin-bottom:14px;">Joined Participants <span style="color:var(--text-muted);font-weight:500;" id="participantCount">(@Model.Participants.Count)</span></h3>
+
+    <div id="participantsList">
+        @foreach (var p in Model.Participants)
+        {
+            <div class="list-item" style="margin-bottom:10px;">
+                <div class="icon-circle purple"><i class="bi bi-person-fill"></i></div>
+                <div class="info">
+                    <div class="title">@p.DisplayName</div>
+                </div>
+                <span class="tag-current" style="background:@(p.IsHost ? "var(--primary-soft-bg)" : "var(--green-soft-bg)");color:@(p.IsHost ? "var(--primary)" : "var(--green)");">
+                    @(p.IsHost ? "HOST" : "JOINED")
+                </span>
+            </div>
+        }
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;">
+        <a class="btn btn-secondary" asp-action="Index">Back to Hub</a>
+        @if (Model.IsHost)
+        {
+            <form asp-action="StartRoom" method="post">
+                <input type="hidden" name="roomCode" value="@Model.Code" />
+                <button type="submit" class="btn btn-primary"><i class="bi bi-play-fill"></i> Start Live Quiz</button>
+            </form>
+        }
+        else
+        {
+            <span class="btn btn-secondary" style="opacity:.7;cursor:default;">Waiting for host to start&hellip;</span>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script src="~/js/room-live.js" asp-append-version="true"></script>
+}

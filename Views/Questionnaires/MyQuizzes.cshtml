@@ -1,0 +1,86 @@
+﻿@*
+    Views/Questionnaires/MyQuizzes.cshtml — NEW FILE.
+    Backs QuestionnairesController.MyQuizzes. Model is List<MyQuizRow>.
+*@
+@using EduSathi.Models
+@model List<EduSathi.ViewModels.MyQuizRow>
+
+@{
+    ViewData["Title"] = "My Quizzes";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div>
+        <h1>My Quizzes</h1>
+        <p class="subtitle">@Model.Count room@(Model.Count == 1 ? "" : "s") you've created or joined</p>
+    </div>
+    <a class="btn-back" asp-action="CreateCustom"><i class="bi bi-plus-lg"></i> New</a>
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="empty-state">
+        <div class="icon-circle purple lg"><i class="bi bi-patch-question"></i></div>
+        <h3>No quizzes yet</h3>
+        <p>Create a custom room or join one with a code to get started.</p>
+        <a class="btn btn-primary" asp-action="Index">Go to Questionnaires</a>
+    </div>
+}
+else
+{
+    foreach (var row in Model)
+    {
+        var statusLabel = !row.IsStarted ? "Waiting" : (row.MyCompleted ? "Completed" : "Live");
+        var statusColour = !row.IsStarted ? "orange" : (row.MyCompleted ? "blue" : "green");
+
+        <div class="list-item history-item-stack">
+            <div style="display:flex;align-items:center;gap:14px;width:100%;">
+                <div class="icon-circle @(row.Category == RoomCategory.Global ? "purple" : "blue")">
+                    <i class="bi @(row.Category == RoomCategory.Global ? "bi-globe2" : "bi-person-fill")"></i>
+                </div>
+                <div class="info">
+                    <div class="title">
+                        @row.Name
+                        @if (row.IsHost)
+                        {
+                            <span class="tag-current">HOST</span>
+                        }
+                    </div>
+                    <div class="meta">
+                        @row.Category · @row.CreatedAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")
+                        @if (row.Category == RoomCategory.Global)
+                        {
+                            <text> · Code @row.Code · @row.ParticipantCount participant@(row.ParticipantCount == 1 ? "" : "s")</text>
+                        }
+                        @if (row.MyCompleted)
+                        {
+                            <text> · Your score: @row.MyScore/@row.MyTotal</text>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="list-item-actions">
+                <span class="chip-btn @statusColour" style="cursor:default;">@statusLabel</span>
+                @if (!row.IsStarted)
+                {
+                    <a class="chip-btn blue" asp-action="RoomLobby" asp-route-roomCode="@row.Code">
+                        <i class="bi bi-door-open"></i> Lobby <i class="bi bi-arrow-up-right"></i>
+                    </a>
+                }
+                else if (row.Category == RoomCategory.Global)
+                {
+                    <a class="chip-btn orange" asp-action="RoomQuiz" asp-route-roomCode="@row.Code">
+                        <i class="bi bi-clipboard2-check"></i> @(row.MyCompleted ? "Results" : "Play") <i class="bi bi-arrow-up-right"></i>
+                    </a>
+                }
+                else
+                {
+                    <a class="chip-btn orange" asp-action="RoomQuiz" asp-route-id="@row.RoomId">
+                        <i class="bi bi-clipboard2-check"></i> @(row.MyCompleted ? "Results" : "Play") <i class="bi bi-arrow-up-right"></i>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+}

@@ -40,8 +40,13 @@
             }
 
             function showName() {
-                if (label) {
-                    label.textContent = input.files && input.files.length ? input.files[0].name : "";
+                if (!label) return;
+                if (!input.files || !input.files.length) {
+                    label.textContent = "";
+                } else if (input.files.length === 1) {
+                    label.textContent = input.files[0].name;
+                } else {
+                    label.textContent = input.files.length + " files selected";
                 }
             }
 
