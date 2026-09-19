@@ -16,44 +16,22 @@ using UglyToad.PdfPig;
 
 namespace EduSathi.Controllers
 {
-    // ============================================================================
-    // COMPLETE REPLACEMENT for Controllers/ExamController.cs.
-    //
-    // Index, ProcessSubmission and QuizSession are UNCHANGED — same signatures,
-    // same bodies, same behaviour, including the sample-summary and sample-question
-    // seeding. Diff this file against yours and you should see only additions.
-    //
-    // THREE ACTIONS ARE ADDED. All three are new routes; none of them alters an
-    // existing one:
-    //
-    //   History()          GET  /Exam/History
-    //       The migrated design has a document history page in the sidebar. The data
-    //       is the same query Index() already runs.
-    //
-    //   Quiz(id, level)    GET  /Exam/Quiz?id=..&level=Basic
-    //   Quiz(...)          POST /Exam/Quiz
-    //       QuizSession.cshtml listed questions but gave the user no way to answer
-    //       them — no radios, no submit, no scoring. The converted design is an
-    //       answerable quiz, so it needs somewhere to post to. Grading is done here
-    //       on the server, deliberately: the old Web Forms page graded in a postback
-    //       and correct answers never reached the browser before submission, and
-    //       keeping that property matters more than saving a round trip.
-    //
-    // Nothing here writes to the database. If you'd rather these live in their own
-    // controller, lift the three actions out — they only need _context.
-    // ============================================================================
     [Authorize]
     public class ExamController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
-        private readonly GeminiService _summaryService;
 
-        public ExamController(ApplicationDbContext context, IWebHostEnvironment env, GeminiService geminiService)
+        // Replaced GeminiService with your two new isolated services
+        private readonly SummaryService _summaryService;
+        private readonly McqService _mcqService;
+
+        public ExamController(ApplicationDbContext context, IWebHostEnvironment env, SummaryService summaryService, McqService mcqService)
         {
             _context = context;
             _env = env;
-            _summaryService = geminiService;
+            _summaryService = summaryService;
+            _mcqService = mcqService;
         }
 
         public async Task<IActionResult> Index()
@@ -108,7 +86,7 @@ namespace EduSathi.Controllers
                     extractedText = extractedText.Substring(0, 30000);
                 }
 
-                // Generate comprehensive learning summary only
+                // Generates comprehensive learning summary using the new SummaryService
                 string aiSummary = await _summaryService.GenerateSummaryAsync(extractedText);
 
                 var newDoc = new UploadedDocument
@@ -159,8 +137,6 @@ namespace EduSathi.Controllers
         // ====================== ADDED BELOW THIS LINE ======================
 
         // GET: /Exam/History
-        // Same query as Index(), rendered as the document history list from the
-        // migrated design. Read-only.
         public async Task<IActionResult> History()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -182,7 +158,6 @@ namespace EduSathi.Controllers
         }
 
         // POST: /Exam/Quiz
-        // `answers` binds from inputs named answers[<questionId>] with values "A".."D".
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ActionName("Quiz")]
@@ -197,17 +172,9 @@ namespace EduSathi.Controllers
                 vm.Answers.TryGetValue(q.Id, out var picked) &&
                 string.Equals(picked, q.CorrectOption, StringComparison.OrdinalIgnoreCase));
 
-            // TODO(backend): nothing is saved. To persist scores, XP and streaks you'd
-            // need an attempt table (UserId, UploadedDocumentId, Level, Score, Total,
-            // CompletedAt) plus a migration. Profile/Index currently shows "—" for
-            // average score and streak for exactly this reason.
-
             return View("Quiz", vm);
         }
 
-        // Loads one document + one difficulty level, scoped to the signed-in user.
-        // Returns null when the document doesn't exist or belongs to someone else,
-        // which is the same ownership check QuizSession() does.
         private async Task<QuizAttemptViewModel?> BuildAttemptAsync(int documentId, QuestionLevel level)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

@@ -4,7 +4,7 @@
     This replaces the bootstrap sidebar shell with the EduSathi sidebar from
     Site.Master. Everything functional in the original file is preserved:
 
-      - @@inject SignInManager / UserManager               -> kept
+      - @inject SignInManager / UserManager               -> kept
       - "Hi, {firstName}" greeting from ApplicationUser    -> kept (now the sidebar footer)
       - Identity-area logout form with returnUrl           -> kept, byte-for-byte route values
       - jquery + bootstrap.bundle + site.js script tags    -> REMOVED, see note below
@@ -16,7 +16,7 @@
     edusathi.css makes both fight over html/body backgrounds.
 
     IF YOU ADD A PAGE THAT NEEDS JQUERY VALIDATION: add it per-page via
-    @@section Scripts { <partial name="_ValidationScriptsPartial" /> } and pull
+    @section Scripts { <partial name="_ValidationScriptsPartial" /> } and pull
     jquery in there, or add the two script tags back here.
 
     The inline <style> block from the original is gone — those rules are now in
@@ -29,14 +29,6 @@
 @{
     var controller = (ViewContext.RouteData.Values["controller"] as string ?? "").ToLowerInvariant();
     var action = (ViewContext.RouteData.Values["action"] as string ?? "").ToLowerInvariant();
-
-    // Site.Master.cs picked the active link from the .aspx filename; RouteData is
-    // the ASP.NET Core equivalent.
-    var isHome = controller == "exam" && action == "index";
-    var isHistory = controller == "exam" && action == "history";
-    var isQuestionnaires = controller == "questionnaires" && action != "myquizzes";
-    var isMyQuizzes = controller == "questionnaires" && action == "myquizzes";
-    var isProfile = controller == "profile";
 
     string displayName = User.Identity?.Name ?? "";
     if (SignInManager.IsSignedIn(User))
@@ -84,22 +76,22 @@
             <!-- Sidebar Links with Dynamic Active Highlighting -->
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Profile" ? "active" : "")" asp-controller="Questionaries" asp-action="Profile">
+                    <a class="nav-link @(action == "profile" ? "active" : "")" asp-controller="Questionnaires" asp-action="Profile">
                         <i class="bi bi-person-badge"></i> Profile
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Summary" ? "active" : "")" asp-controller="Exam" asp-action="Index">
+                    <a class="nav-link @(controller == "exam" && action == "index" ? "active" : "")" asp-controller="Exam" asp-action="Index">
                         <i class="bi bi-speedometer2"></i> Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Index" && ViewContext.RouteData.Values["controller"]?.ToString() == "Questionaries" ? "active" : "")" asp-controller="Questionaries" asp-action="Index">
-                        <i class="bi bi-collection-fill"></i> Questionaries
+                    <a class="nav-link @(controller == "questionnaires" && action == "index" ? "active" : "")" asp-controller="Questionnaires" asp-action="Index">
+                        <i class="bi bi-collection-fill"></i> Questionnaires
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "History" ? "active" : "")" asp-controller="Questionaries" asp-action="History">
+                    <a class="nav-link @(action == "history" ? "active" : "")" asp-controller="Exam" asp-action="History">
                         <i class="bi bi-clock-history"></i> History
                     </a>
                 </li>
@@ -108,18 +100,14 @@
             <div class="sidebar-footer">
                 @if (SignInManager.IsSignedIn(User))
                 {
-                    <a class="sidebar-user" asp-controller="Profile" asp-action="Index">
+                    <a class="sidebar-user" asp-controller="Questionnaires" asp-action="Profile">
                         <div class="avatar">@initials</div>
                         <div>
                             <div class="name">@displayName</div>
-                            @* TODO(backend): no attempt/streak table exists yet, so this
-                               label is static. Wire it up when scoring is persisted. *@
                             <div class="streak"><i class="bi bi-mortarboard"></i> Keep going</div>
                         </div>
                     </a>
 
-                    @* Preserved verbatim from the original _DashboardLayout: Identity
-                       handles sign-out, not AccountController. *@
                     <form class="w-100" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })"
                           style="margin-top:12px;">
                         <button type="submit" class="btn btn-secondary btn-block">
@@ -130,10 +118,11 @@
             </div>
         </aside>
 
-    <!-- Main Content Area -->
-    <main>
-        @RenderBody()
-    </main>
+        <!-- Main Content Area -->
+        <main>
+            @RenderBody()
+        </main>
+    </div>
 
     <script src="~/js/edusathi.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)

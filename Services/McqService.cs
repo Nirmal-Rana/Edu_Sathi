@@ -29,7 +29,7 @@ namespace EduSathi.Services
 
     Respond with ONLY a raw JSON array (no markdown code fences, no commentary, no extra text before or after).
     Each element must be an object with exactly these keys:
-    - ""question"": string
+    - ""questionText"": string
     - ""optionA"": string
     - ""optionB"": string
     - ""optionC"": string

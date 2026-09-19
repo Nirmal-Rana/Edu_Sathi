@@ -1,4 +1,13 @@
-﻿@model EduSathi.ViewModels.CreateRoomViewModel
+﻿@*
+    Views/Questionnaires/CreateCustom.cshtml — NEW FILE.
+
+    Posts to QuestionnairesController.CreateCustom. Reuses the exact building
+    blocks already in edusathi.css/js rather than inventing new ones:
+      - .upload-box / data-dropzone            (multi-file drop, see edusathi.js)
+      - .doc-option / .doc-radio checkbox rows  (multi-select instead of Exam/Index's radios)
+      - .pill-group / data-pill-group            (Solo vs Global category picker)
+*@
+@model EduSathi.ViewModels.CreateRoomViewModel
 
 @{
     ViewData["Title"] = "Create Custom Quiz Room";

@@ -3,8 +3,6 @@ using EduSathi.Hubs;
 using EduSathi.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using EduSathi.Data;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,19 +12,23 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
-
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// 2. Configure ASP.NET Core Identity for user registration and profiles
 // 2. Configure ASP.NET Core Identity with your custom ApplicationUser model
 builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
 
 builder.Services.AddHttpClient<EduSathi.Services.SummaryService>();
 builder.Services.AddHttpClient<EduSathi.Services.McqService>();
+
+// Register Swagger generator
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -37,13 +39,19 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// ---> ADDED SWAGGER MIDDLEWARE HERE <---
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "EduSathi API V1");
+});
+
 app.UseHttpsRedirection();
 app.UseRouting();
 
 // 3. Authentication MUST come before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapStaticAssets();
 
 // 4. Route default traffic straight to your Home landing page first
