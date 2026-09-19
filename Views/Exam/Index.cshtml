@@ -43,7 +43,11 @@
         <div asp-validation-summary="All" class="field-errors"></div>
 
         <div class="upload-box" data-dropzone>
-            <div class="icon-circle"><i class="bi bi-cloud-arrow-up"></i></div>
+            <!-- Changed to a label linked to the NewPdfFile input so clicking the icon opens the file browser -->
+            <label class="icon-circle" for="NewPdfFile" style="cursor: pointer;">
+                <i class="bi bi-cloud-arrow-up"></i>
+            </label>
+
             <div class="upload-title">
                 Drag &amp; drop your PDF here, or
                 <button type="button" class="btn-link-orange" data-dropzone-browse>browse</button>
