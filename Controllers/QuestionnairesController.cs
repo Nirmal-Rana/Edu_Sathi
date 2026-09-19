@@ -743,5 +743,15 @@ namespace EduSathi.Controllers
 
             return View(myRooms);
         }
+        [HttpGet]
+        public async Task<IActionResult> Flashcards(int id)
+        {
+            var document = await _context.UploadedDocuments
+                .FirstOrDefaultAsync(d => d.Id == id && d.UserId == _userManager.GetUserId(User));
+
+            if (document == null) return NotFound();
+
+            return View(document);
+        }
     }
 }

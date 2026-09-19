@@ -1,0 +1,108 @@
+﻿@model EduSathi.Models.UploadedDocument
+
+@{
+    ViewData["Title"] = "Flashcards - " + Model.FileName;
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div>
+        <a asp-controller="Summary" asp-action="Details" asp-route-id="@Model.Id" class="btn-back" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--text-muted); text-decoration:none; margin-bottom:8px;">
+            <i class="bi bi-arrow-left"></i> Back to Study Guide
+        </a>
+        <h1>Active Recall Flashcards</h1>
+        <p class="subtitle">Document: <strong>@Model.FileName</strong> &bull; Click card to flip and test your memory.</p>
+    </div>
+</div>
+
+<div class="row justify-content-center my-4">
+    <div class="col-md-8">
+        <!-- Progress Counter -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="badge bg-primary px-3 py-2" style="font-size: 13px; border-radius: 8px;">Card <span id="current-card-num">1</span> of <span id="total-cards">4</span></span>
+            <span class="text-muted" style="font-size: 14px; font-weight: 600;" id="card-mode-indicator">💡 Question (Click to Reveal)</span>
+        </div>
+
+        <!-- Interactive Flashcard Box -->
+        <div id="flashcard-card" class="card shadow-sm text-center p-5" onclick="flipFlashcard()" style="cursor: pointer; min-height: 280px; display: flex; align-items: center; justify-content: center; border-radius: 16px; background: #ffffff; border: 2px solid #e1e6f0; transition: all 0.2s ease-in-out;">
+            <div>
+                <div id="card-label" style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #5d5cf5; margin-bottom: 12px;">Question</div>
+                <h3 id="card-content" class="fw-bold" style="color: #0b1226; font-size: 22px; line-height: 1.5;">Loading flashcards...</h3>
+            </div>
+        </div>
+
+        <!-- Navigation Controls -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <button onclick="prevFlashcard()" class="btn btn-outline-secondary px-4" style="border-radius: 10px; font-weight: 600;">
+                <i class="bi bi-arrow-left"></i> Previous
+            </button>
+            <button onclick="flipFlashcard()" class="btn btn-light px-4 border" style="border-radius: 10px; font-weight: 600; color: #3b4663;">
+                <i class="bi bi-arrow-repeat"></i> Flip Card
+            </button>
+            <button onclick="nextFlashcard()" class="btn btn-primary px-4" style="border-radius: 10px; font-weight: 600;">
+                Next <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // High-yield active recall flashcard dataset
+        let flashcards = [
+            { q: "What is the core definition of Artificial Intelligence in simple terms?", a: "The simulation of human intelligence by machines to learn, reason, and solve problems autonomously." },
+            { q: "How does Machine Learning differ from traditional hard-coded software?", a: "ML systems learn patterns from massive datasets instead of relying on explicit hard-coded rules." },
+            { q: "What role do multi-layered neural networks play in Deep Learning?", a: "They simulate human brain structures to handle advanced data processing like computer vision and language comprehension." },
+            { q: "Why is active recall superior to passive reading for student retention?", a: "It forces the brain to retrieve information actively, strengthening neural pathways and memory endurance." }
+        ];
+
+        let currentIndex = 0;
+        let isShowingQuestion = true;
+
+        function loadFlashcard() {
+            const cardContent = document.getElementById("card-content");
+            const cardLabel = document.getElementById("card-label");
+            const cardNum = document.getElementById("current-card-num");
+            const modeIndicator = document.getElementById("card-mode-indicator");
+            const cardElement = document.getElementById("flashcard-card");
+
+            document.getElementById("total-cards").textContent = flashcards.length;
+            cardNum.textContent = currentIndex + 1;
+
+            if (isShowingQuestion) {
+                cardLabel.textContent = "Question";
+                cardLabel.style.color = "#5d5cf5";
+                cardContent.textContent = flashcards[currentIndex].q;
+                cardElement.style.background = "#ffffff";
+                modeIndicator.textContent = "💡 Question (Click to Reveal)";
+            } else {
+                cardLabel.textContent = "Short Answer";
+                cardLabel.style.color = "#198754";
+                cardContent.textContent = flashcards[currentIndex].a;
+                cardElement.style.background = "#f0fdf4"; // Soft green tint indicating answer state
+                modeIndicator.textContent = "✅ Answer Revealed";
+            }
+        }
+
+        function flipFlashcard() {
+            isShowingQuestion = !isShowingQuestion;
+            loadFlashcard();
+        }
+
+        function nextFlashcard() {
+            currentIndex = (currentIndex + 1) % flashcards.length;
+            isShowingQuestion = true;
+            loadFlashcard();
+        }
+
+        function prevFlashcard() {
+            currentIndex = (currentIndex - 1 + flashcards.length) % flashcards.length;
+            isShowingQuestion = true;
+            loadFlashcard();
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            loadFlashcard();
+        });
+    </script>
+}
