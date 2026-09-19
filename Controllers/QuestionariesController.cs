@@ -5,6 +5,8 @@ using EduSathi.Data;
 using EduSathi.Models;
 using EduSathi.Services;
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using UglyToad.PdfPig;
 
 namespace EduSathi.Controllers
@@ -14,13 +16,15 @@ namespace EduSathi.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
-        private readonly GeminiService _geminiService;
+        private readonly SummaryService _summaryService;
+        private readonly McqService _mcqService;
 
-        public QuestionariesController(ApplicationDbContext context, IWebHostEnvironment env, GeminiService geminiService)
+        public QuestionariesController(ApplicationDbContext context, IWebHostEnvironment env, SummaryService summaryService, McqService mcqService)
         {
             _context = context;
             _env = env;
-            _geminiService = geminiService;
+            _summaryService = summaryService;
+            _mcqService = mcqService;
         }
 
         // GET: /Questionaries/Profile
@@ -106,7 +110,7 @@ namespace EduSathi.Controllers
                             FileName = file.FileName,
                             FilePath = filePath,
                             ExtractedText = fileText,
-                            Summary = await _geminiService.GenerateSummaryAsync(fileText),
+                            Summary = await _summaryService.GenerateSummaryAsync(fileText),
                             UploadedAt = DateTime.UtcNow
                         };
 
@@ -146,20 +150,33 @@ namespace EduSathi.Controllers
             // 3. Generate dynamic MCQs using Gemini service based on requested question count
             if (primaryDoc != null)
             {
-                string aiResponse = await _geminiService.GenerateMcqsAsync(combinedExtractedText, questionCount);
+                string aiResponse = await _mcqService.GenerateMcqsAsync(combinedExtractedText, questionCount);
 
-                // Add a sample parsed question entity linked to the primary document so exams/quizzes can load it
-                primaryDoc.Questions.Add(new Question
+                var parsedQuestions = ParseMcqJson(aiResponse);
+
+                if (parsedQuestions.Count > 0)
                 {
-                    QuestionText = $"AI Generated Review Question based on uploaded files (Target count: {questionCount})",
-                    OptionA = "Review Content A",
-                    OptionB = "Review Content B",
-                    OptionC = "Review Content C",
-                    OptionD = "Review Content D",
-                    CorrectOption = "A",
-                    Level = QuestionLevel.Medium,
-                    Explanation = aiResponse
-                });
+                    foreach (var q in parsedQuestions)
+                    {
+                        primaryDoc.Questions.Add(q);
+                    }
+                }
+                else
+                {
+                    // Fallback: keep the raw AI reply visible instead of silently failing,
+                    // so a bad/unparseable response is obvious rather than showing fake options.
+                    primaryDoc.Questions.Add(new Question
+                    {
+                        QuestionText = "Could not parse AI-generated questions. Raw AI response is shown in the explanation below.",
+                        OptionA = "N/A",
+                        OptionB = "N/A",
+                        OptionC = "N/A",
+                        OptionD = "N/A",
+                        CorrectOption = "A",
+                        Level = QuestionLevel.Medium,
+                        Explanation = aiResponse
+                    });
+                }
 
                 await _context.SaveChangesAsync();
             }
@@ -194,6 +211,70 @@ namespace EduSathi.Controllers
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        // Parses the JSON array returned by McqService.GenerateMcqsAsync into Question entities.
+        // Gemini sometimes wraps its JSON in ```json ... ``` fences even when told not to, so those
+        // are stripped first. Any entry that fails to parse cleanly is skipped rather than crashing
+        // the whole batch.
+        private List<Question> ParseMcqJson(string aiResponse)
+        {
+            var result = new List<Question>();
+
+            if (string.IsNullOrWhiteSpace(aiResponse))
+                return result;
+
+            string cleaned = aiResponse.Trim();
+
+            // Strip markdown code fences (```json ... ``` or ``` ... ```) if present
+            var fenceMatch = Regex.Match(cleaned, @"```(?:json)?\s*([\s\S]*?)```", RegexOptions.IgnoreCase);
+            if (fenceMatch.Success)
+            {
+                cleaned = fenceMatch.Groups[1].Value.Trim();
+            }
+
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(cleaned);
+
+                if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                    return result;
+
+                foreach (var item in doc.RootElement.EnumerateArray())
+                {
+                    string GetStr(string propName) =>
+                        item.TryGetProperty(propName, out var val) ? (val.GetString() ?? "") : "";
+
+                    string correct = GetStr("correctOption").Trim().ToUpperInvariant();
+                    if (correct != "A" && correct != "B" && correct != "C" && correct != "D")
+                        correct = "A";
+
+                    var question = new Question
+                    {
+                        QuestionText = GetStr("question"),
+                        OptionA = GetStr("optionA"),
+                        OptionB = GetStr("optionB"),
+                        OptionC = GetStr("optionC"),
+                        OptionD = GetStr("optionD"),
+                        CorrectOption = correct,
+                        Explanation = GetStr("explanation"),
+                        Level = QuestionLevel.Medium
+                    };
+
+                    // Skip malformed entries (e.g. missing question text) instead of saving junk rows
+                    if (!string.IsNullOrWhiteSpace(question.QuestionText))
+                    {
+                        result.Add(question);
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Not valid JSON (e.g. Gemini returned an error string or prose) — caller falls back
+                return new List<Question>();
+            }
+
+            return result;
         }
 
         // GET: /Questionaries/RoomLobby/{roomCode}

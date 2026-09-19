@@ -24,7 +24,8 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddHttpClient<EduSathi.Services.GeminiService>();
+builder.Services.AddHttpClient<EduSathi.Services.SummaryService>();
+builder.Services.AddHttpClient<EduSathi.Services.McqService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

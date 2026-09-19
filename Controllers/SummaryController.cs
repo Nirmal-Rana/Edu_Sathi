@@ -24,13 +24,13 @@ namespace EduSathi.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
-        private readonly GeminiService _geminiService;
+        private readonly SummaryService _summaryService;
 
-        public SummaryController(ApplicationDbContext context, IWebHostEnvironment env, GeminiService geminiService)
+        public SummaryController(ApplicationDbContext context, IWebHostEnvironment env, SummaryService summaryService)
         {
             _context = context;
             _env = env;
-            _geminiService = geminiService;
+            _summaryService = summaryService;
         }
 
         // GET: /Summary
@@ -88,7 +88,7 @@ namespace EduSathi.Controllers
                 }
 
                 // Generate comprehensive learning summary only
-                string aiSummary = await _geminiService.GenerateSummaryAsync(extractedText);
+                string aiSummary = await _summaryService.GenerateSummaryAsync(extractedText);
 
                 var newDoc = new UploadedDocument
                 {
