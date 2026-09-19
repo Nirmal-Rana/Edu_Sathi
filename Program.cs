@@ -1,15 +1,17 @@
 using EduSathi.Data;
 using EduSathi.Hubs;
 using EduSathi.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Configure Entity Framework Core with SQL Server connection string
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -18,10 +20,32 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
+// Configure cookie login path to redirect unauthenticated users to /Account/Login
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+});
+
+// 2.1 Configure JWT Bearer for mobile API endpoints (Identity manages cookies automatically)
+builder.Services.AddAuthentication()
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+        ValidAudience = builder.Configuration["JwtSettings:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!))
+    };
+});
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
-
 builder.Services.AddHttpClient<EduSathi.Services.SummaryService>();
 builder.Services.AddHttpClient<EduSathi.Services.McqService>();
 
@@ -39,7 +63,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// ---> ADDED SWAGGER MIDDLEWARE HERE <---
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
@@ -52,12 +75,13 @@ app.UseRouting();
 // 3. Authentication MUST come before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapStaticAssets();
 
-// 4. Route default traffic straight to your Home landing page first
+// 4. Route default traffic straight to your Summary page first
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+    pattern: "{controller=Summary}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 // 5. Map Razor Pages (Required for Identity Login/Register UI pages)

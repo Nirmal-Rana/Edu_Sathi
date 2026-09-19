@@ -175,7 +175,6 @@ namespace EduSathi.Controllers
                 Participants = room.Participants.OrderBy(p => p.JoinedAt).ToList()
             };
 
-            // Integrated friend invite options loading for the host
             if (me.IsHost)
             {
                 var participantUserIds = room.Participants.Select(p => p.UserId).ToHashSet();
@@ -226,7 +225,6 @@ namespace EduSathi.Controllers
             return RedirectToAction(nameof(RoomQuiz), new { roomCode = room.Code });
         }
 
-        // Integrated friend invite action handler
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> InviteFriendToRoom(string roomCode, string friendUserId)
@@ -269,11 +267,112 @@ namespace EduSathi.Controllers
         public async Task<IActionResult> RoomQuiz(string? roomCode, int? id)
         {
             var room = await LoadRoomForQuizAsync(roomCode, id);
+
+            if (room == null && id.HasValue)
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var doc = await _context.UploadedDocuments
+                    .Include(d => d.Questions)
+                    .FirstOrDefaultAsync(d => d.Id == id.Value && d.UserId == userId);
+
+                if (doc != null)
+                {
+                    room = new QuizRoom
+                    {
+                        Name = doc.FileName,
+                        CreatorUserId = userId,
+                        Category = RoomCategory.Solo,
+                        CreatedAt = DateTime.UtcNow,
+                        StartedAt = DateTime.UtcNow
+                    };
+                    room.Documents.Add(new QuizRoomDocument { UploadedDocumentId = doc.Id });
+
+                    _context.QuizRooms.Add(room);
+                    await _context.SaveChangesAsync();
+
+                    await AddParticipantIfMissingAsync(room, isHost: true);
+                }
+            }
+
             if (room == null) return NotFound();
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var me = room.Participants.FirstOrDefault(p => p.UserId == userId);
-            if (me == null) return Forbid();
+            // AUTO-GENERATE QUESTIONS ON THE FLY IF NONE EXIST YET (Distributed across levels, targeting 10 total)
+            var documentIds = room.Documents.Select(d => d.UploadedDocumentId).ToList();
+            bool hasQuestions = await _context.Questions.AnyAsync(q => documentIds.Contains(q.UploadedDocumentId));
+
+            if (!hasQuestions && documentIds.Any())
+            {
+                foreach (var docId in documentIds)
+                {
+                    var doc = await _context.UploadedDocuments.FindAsync(docId);
+                    if (doc != null && !string.IsNullOrEmpty(doc.ExtractedText))
+                    {
+                        int targetCount = 10;
+                        int baseCount = targetCount / 3;
+                        int remainder = targetCount % 3;
+
+                        var levels = new[] { QuestionLevel.Basic, QuestionLevel.Medium, QuestionLevel.Hard };
+                        for (int i = 0; i < levels.Length; i++)
+                        {
+                            var level = levels[i];
+                            int currentLevelCount = baseCount + (i < remainder ? 1 : 0);
+                            if (currentLevelCount <= 0) continue;
+
+                            try
+                            {
+                                var jsonResponse = await _mcqService.GenerateMcqsAsync(doc.ExtractedText, (int)level, currentLevelCount);
+                                if (!string.IsNullOrEmpty(jsonResponse))
+                                {
+                                    string cleaned = jsonResponse.Trim();
+                                    var fenceMatch = Regex.Match(cleaned, @"```(?:json)?\s*([\s\S]*?)```", RegexOptions.IgnoreCase);
+                                    if (fenceMatch.Success)
+                                    {
+                                        cleaned = fenceMatch.Groups[1].Value.Trim();
+                                    }
+
+                                    var generatedQuestions = JsonSerializer.Deserialize<List<Question>>(cleaned, new JsonSerializerOptions
+                                    {
+                                        PropertyNameCaseInsensitive = true
+                                    });
+
+                                    if (generatedQuestions != null)
+                                    {
+                                        foreach (var q in generatedQuestions)
+                                        {
+                                            _context.Questions.Add(new Question
+                                            {
+                                                UploadedDocumentId = doc.Id,
+                                                QuestionText = q.QuestionText,
+                                                OptionA = q.OptionA,
+                                                OptionB = q.OptionB,
+                                                OptionC = q.OptionC,
+                                                OptionD = q.OptionD,
+                                                CorrectOption = q.CorrectOption,
+                                                Level = level,
+                                                Explanation = q.Explanation
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error auto-generating questions: {ex.Message}");
+                            }
+                        }
+                        await _context.SaveChangesAsync();
+                    }
+                }
+            }
+
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var me = room.Participants.FirstOrDefault(p => p.UserId == currentUserId);
+            if (me == null)
+            {
+                await AddParticipantIfMissingAsync(room, isHost: false);
+                me = room.Participants.FirstOrDefault(p => p.UserId == currentUserId);
+                if (me == null) return Forbid();
+            }
 
             if (room.Category == RoomCategory.Global && !room.IsStarted)
             {
@@ -402,10 +501,21 @@ namespace EduSathi.Controllers
             if (id.HasValue)
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                return await _context.QuizRooms
+
+                var room = await _context.QuizRooms
                     .Include(r => r.Participants)
                     .Include(r => r.Documents)
                     .FirstOrDefaultAsync(r => r.Id == id.Value && r.CreatorUserId == userId);
+
+                if (room == null)
+                {
+                    room = await _context.QuizRooms
+                        .Include(r => r.Participants)
+                        .Include(r => r.Documents)
+                        .FirstOrDefaultAsync(r => r.CreatorUserId == userId && r.Documents.Any(d => d.UploadedDocumentId == id.Value));
+                }
+
+                return room;
             }
 
             return null;
@@ -517,11 +627,20 @@ namespace EduSathi.Controllers
             _context.UploadedDocuments.Add(doc);
             await _context.SaveChangesAsync();
 
-            foreach (var level in new[] { QuestionLevel.Basic, QuestionLevel.Medium, QuestionLevel.Hard })
+            // Proportionally split the requested questionCount across Basic, Medium, and Hard levels
+            int baseCount = questionCount / 3;
+            int remainder = questionCount % 3;
+
+            var levels = new[] { QuestionLevel.Basic, QuestionLevel.Medium, QuestionLevel.Hard };
+            for (int i = 0; i < levels.Length; i++)
             {
+                var level = levels[i];
+                int currentLevelCount = baseCount + (i < remainder ? 1 : 0);
+                if (currentLevelCount <= 0) continue;
+
                 try
                 {
-                    var jsonResponse = await _mcqService.GenerateMcqsAsync(extractedText, (int)level, questionCount);
+                    var jsonResponse = await _mcqService.GenerateMcqsAsync(extractedText, (int)level, currentLevelCount);
 
                     if (!string.IsNullOrEmpty(jsonResponse))
                     {
