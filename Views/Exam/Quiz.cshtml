@@ -1,0 +1,141 @@
+﻿@*
+    Views/Exam/Quiz.cshtml — NEW FILE.
+
+    Converted from Quiz.aspx. This is the page the old QuizSession tabs were
+    missing: the questions are answerable and the answers are graded.
+
+    Markup shape matters here. wwwroot/css/edusathi.css styles
+    `.option-list ol / li` and keys the correct/incorrect states off
+    `li:has(input.correct)` and `li:has(input:checked)`, because that's the HTML
+    asp:RadioButtonList used to emit. The <ol><li><input><label> structure below
+    reproduces it. Restructure it and the quiz loses its styling.
+
+    Radio names are answers[<Question.Id>] with values "A".."D", matching
+    Question.CorrectOption, so they bind to Dictionary<int,string> in
+    ExamController.QuizSubmit. Unanswered questions post no key at all.
+*@
+@using EduSathi.Models
+@using EduSathi.ViewModels
+@model EduSathi.ViewModels.QuizAttemptViewModel
+
+@{
+    ViewData["Title"] = Model.LevelLabel + " Questions";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div>
+        <h1>@Model.LevelLabel Questions</h1>
+        <p class="subtitle quiz-meta-inline">@Model.FileName</p>
+    </div>
+    <a class="btn-back" asp-action="QuizSession" asp-route-id="@Model.DocumentId">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+
+@if (Model.IsSubmitted)
+{
+    <div class="score-banner">
+        <div>
+            <div class="score-value">@Model.CorrectCount/@Model.Total</div>
+            <div class="score-label">correct answers</div>
+        </div>
+        <div style="flex:1;">
+            <div style="font-weight:700;">+@Model.XpEarned XP</div>
+            <div class="score-label">@Model.PercentCorrect% correct</div>
+        </div>
+    </div>
+}
+
+@if (Model.Total == 0)
+{
+    <div class="empty-state">
+        <div class="icon-circle purple lg"><i class="bi bi-question-circle"></i></div>
+        <h3>No questions at this level</h3>
+        <p>This document doesn't have any @Model.LevelLabel.ToLowerInvariant() questions yet.</p>
+        <a class="btn btn-primary" asp-action="QuizSession" asp-route-id="@Model.DocumentId">Back to summary</a>
+    </div>
+}
+else
+{
+    <form method="post" asp-action="Quiz">
+        <input type="hidden" name="id" value="@Model.DocumentId" />
+        <input type="hidden" name="level" value="@Model.Level" />
+
+        @{
+            var number = 0;
+        }
+        @foreach (var q in Model.Questions)
+        {
+            number++;
+            Model.Answers.TryGetValue(q.Id, out var picked);
+
+            <div class="question-card">
+                <div class="q-head">
+                    <div class="q-number">@number</div>
+                    <div class="q-text">@q.QuestionText</div>
+                </div>
+
+                <div class="option-list">
+                    <ol>
+                        @foreach (var (letter, text) in QuizAttemptViewModel.OptionsOf(q))
+                        {
+                            var inputId = $"q{q.Id}_{letter}";
+                            var stateClass = "";
+                            if (Model.IsSubmitted)
+                            {
+                                if (string.Equals(letter, q.CorrectOption, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    stateClass = "correct";
+                                }
+                                else if (string.Equals(letter, picked, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    stateClass = "incorrect";
+                                }
+                            }
+
+                            <li>
+                                @* checked / disabled written out by hand - checked="@@bool"
+                                   can emit checked="False", which would select everything. *@
+                                @if (Model.IsSubmitted && string.Equals(letter, picked, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <input type="radio" id="@inputId" name="answers[@q.Id]" value="@letter" class="@stateClass" checked disabled />
+                                }
+                                else if (Model.IsSubmitted)
+                                {
+                                    <input type="radio" id="@inputId" name="answers[@q.Id]" value="@letter" class="@stateClass" disabled />
+                                }
+                                else
+                                {
+                                    <input type="radio" id="@inputId" name="answers[@q.Id]" value="@letter" />
+                                }
+                                <label for="@inputId">@text</label>
+                            </li>
+                        }
+                    </ol>
+                </div>
+
+                @if (Model.IsSubmitted && !string.IsNullOrWhiteSpace(q.Explanation))
+                {
+                    <div class="explanation-box">
+                        <strong>Explanation:</strong> @q.Explanation
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="sticky-submit-bar">
+            <span class="answered-count" data-answered-count>0/@Model.Total answered</span>
+            @if (Model.IsSubmitted)
+            {
+                <a class="btn btn-primary" asp-action="Quiz" asp-route-id="@Model.DocumentId" asp-route-level="@Model.Level">
+                    Try again
+                </a>
+            }
+            else
+            {
+                <button type="submit" class="btn btn-primary">Submit Answers</button>
+            }
+        </div>
+    </form>
+}

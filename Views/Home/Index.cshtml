@@ -1,8 +1,138 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@*
+    Views/Home/Index.cshtml — REPLACES the scaffolded "Welcome / Learn about
+    building Web apps with ASP.NET Core" placeholder.
+
+    Converted from Landing.aspx (MasterPageFile="~/PublicSite.Master").
+
+    HomeController.Index already does exactly what this page needs: it redirects
+    signed-in users to Exam/Index and renders this view for anonymous visitors.
+    No controller change is required.
+*@
+@{
+    ViewData["Title"] = "EduSathi — Turn Your Notes Into Smarter Learning";
+    Layout = "_PublicLayout";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="hero" id="home">
+    <div class="hero-copy">
+        <span class="badge-pill hero-badge"><i class="bi bi-stars"></i> AI-powered</span>
+        <h1>Turn Your Notes Into <span class="text-gradient">Smarter Learning</span></h1>
+        <p class="hero-sub">
+            Upload your study PDFs and EduSathi turns them into clear summaries, adaptive
+            practice questions and quizzes — then lets you challenge friends in live study battles.
+        </p>
+        <div class="hero-actions">
+            <a class="btn btn-primary btn-lg" asp-controller="Account" asp-action="Register">Get Started <i class="bi bi-arrow-right"></i></a>
+            <a class="btn btn-outline btn-lg" asp-controller="Account" asp-action="Login">Login to Continue</a>
+        </div>
+        <div class="hero-stats">
+            <div><strong>18+</strong><span>Pages summarised in seconds</span></div>
+            <div><strong>3</strong><span>Difficulty levels</span></div>
+            <div><strong>Live</strong><span>Study battles</span></div>
+        </div>
+    </div>
+
+    <div class="hero-visual" aria-hidden="true">
+        <div class="card hero-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <span class="badge-pill" style="background:var(--primary-soft-bg);color:var(--primary);border-color:transparent;">
+                    <i class="bi bi-stars"></i> AI Summary
+                </span>
+                <span style="font-size:12px;color:var(--text-muted);"><i class="bi bi-file-earmark-text"></i> 18 pages</span>
+            </div>
+            <h3>Overview</h3>
+            <ul class="summary-bullets">
+                <li>Photosynthesis converts light energy into chemical energy.</li>
+                <li>Two stages: light-dependent reactions and the Calvin cycle.</li>
+            </ul>
+            <div class="takeaway-item" style="margin-top:14px;">
+                <div class="tk-label">Core equation</div>
+                <div class="tk-value">6CO&#8322; + 6H&#8322;O + light &rarr; C&#8326;H&#8321;&#8322;O&#8326; + 6O&#8322;</div>
+            </div>
+        </div>
+        <div class="card hero-card hero-card-float">
+            <div class="q-head" style="margin-bottom:10px;">
+                <div class="q-number">2</div>
+                <div class="q-text" style="font-size:13.5px;">Where does photosynthesis occur?</div>
+            </div>
+            <div style="font-size:12.5px;color:var(--text-muted);"><i class="bi bi-check-circle-fill" style="color:var(--green);"></i> Chloroplast &nbsp;·&nbsp; +10 XP</div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="features">
+    <div class="section-heading">
+        <h2>Everything you need to study smarter</h2>
+        <p>One upload unlocks summaries, practice, quizzes and competitive study battles.</p>
+    </div>
+
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="icon-circle blue lg"><i class="bi bi-book-half"></i></div>
+            <h3>AI Study Summary</h3>
+            <p>Upload study materials and receive organized, easy-to-scan summaries with key takeaways.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon-circle orange lg"><i class="bi bi-ui-checks"></i></div>
+            <h3>Smart Practice</h3>
+            <p>Practice Easy, Medium and Hard written questions generated straight from your file.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon-circle purple lg"><i class="bi bi-clipboard2-check-fill"></i></div>
+            <h3>Interactive Quiz</h3>
+            <p>Answer generated MCQs, get instant feedback and earn scores and XP as you go.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon-circle green lg"><i class="bi bi-people-fill"></i></div>
+            <h3>Study Battles</h3>
+            <p>Share a room code and compete with friends using questions built from your study materials.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt" id="how-it-works">
+    <div class="section-heading">
+        <h2>How it works</h2>
+        <p>From PDF to practice in four simple steps.</p>
+    </div>
+
+    <div class="steps-row">
+        <div class="step-card">
+            <div class="step-number">1</div>
+            <h3>Upload a PDF</h3>
+            <p>Drop in lecture notes, textbook chapters or past papers.</p>
+        </div>
+        <div class="step-card">
+            <div class="step-number">2</div>
+            <h3>Get your summary</h3>
+            <p>Review an AI-generated overview and key takeaways.</p>
+        </div>
+        <div class="step-card">
+            <div class="step-number">3</div>
+            <h3>Practice &amp; quiz</h3>
+            <p>Work through Easy, Medium and Hard questions at your pace.</p>
+        </div>
+        <div class="step-card">
+            <div class="step-number">4</div>
+            <h3>Compete</h3>
+            <p>Share a code and battle friends on the same material.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="about">
+    <div class="section-heading">
+        <h2>About EduSathi</h2>
+        <p>
+            EduSathi ("sathi" — friend, in Nepali) is a study companion built to help students turn
+            dense study material into something they can actually practice with — built for a hackathon,
+            designed to keep helping long after.
+        </p>
+    </div>
+</section>
+
+<section class="cta-banner">
+    <h2>Ready to study smarter?</h2>
+    <p>Create your free account and turn your first PDF into a quiz in minutes.</p>
+    <a class="btn btn-primary btn-lg" asp-controller="Account" asp-action="Register">Start Learning <i class="bi bi-arrow-right"></i></a>
+</section>

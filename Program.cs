@@ -1,4 +1,5 @@
 using EduSathi.Data;
+using EduSathi.Hubs;
 using EduSathi.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,10 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddHttpClient<EduSathi.Services.GeminiService>();
+// Realtime updates for the Questionnaires "Global" room lobby (joins, start,
+// live leaderboard) - see Hubs/RoomHub.cs.
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -52,5 +57,8 @@ app.MapControllerRoute(
 
 // 5. Map Razor Pages (Required for Identity Login/Register UI pages)
 app.MapRazorPages();
+
+// 6. Realtime hub backing the Questionnaires live room lobby.
+app.MapHub<RoomHub>("/hubs/room");
 
 app.Run();
