@@ -1,39 +1,144 @@
-﻿@model EduSathi.ViewModels.ExamDashboardViewModel
+﻿@*
+    Views/Exam/Index.cshtml — COMPLETE REPLACEMENT.
+
+    Restyled from Default.aspx. Bound to your existing ExamDashboardViewModel, and
+    it posts to your existing ExamController.ProcessSubmission with no controller
+    change: the model binder still receives NewPdfFile and SelectedExistingDocumentId.
+
+    What changed and why:
+      - <input asp-for="NewPdfFile" type="file"> is now inside the .upload-box
+        dropzone from the old design. Same asp-for, so the name attribute is
+        identical and binding is unaffected. The drag/drop and filename display
+        come from wwwroot/js/edusathi.js via the data-dropzone* hooks.
+      - The <select asp-for="SelectedExistingDocumentId"> became a list of radio
+        rows, because the old design showed saved documents as cards. The radios
+        are named SelectedExistingDocumentId, so the binder sees the same int?.
+        An empty list renders nothing, matching the "-- Choose a saved PDF --"
+        default of null.
+      - asp-validation-summary added so the "Please upload a new PDF or select an
+        existing one." error from ProcessSubmission is actually visible. Your old
+        view never displayed it.
+*@
+@model EduSathi.ViewModels.ExamDashboardViewModel
 
 @{
-    ViewData["Title"] = "Exam Preparation Hub";
+    ViewData["Title"] = "Home";
     Layout = "~/Views/Shared/_DashboardLayout.cshtml";
 }
 
-<div class="container mt-4">
-    <h2>Exam Prep Dashboard</h2>
-    <hr />
-
-    <form id="uploadForm" asp-action="ProcessSubmission" enctype="multipart/form-data" method="post" class="card p-4 shadow-sm">
-        <div class="mb-3">
-            <label class="form-label font-weight-bold">Upload New PDF From Device</label>
-            <input asp-for="NewPdfFile" type="file" class="form-control" accept=".pdf" />
-        </div>
-
-        <div class="text-center my-2 text-muted">- OR -</div>
-
-        <div class="mb-3">
-            <label class="form-label font-weight-bold">Select from Previously Uploaded PDFs</label>
-            <select asp-for="SelectedExistingDocumentId" class="form-select" asp-items="@(new SelectList(Model.PreviousDocuments, "Id", "FileName"))">
-                <option value="">-- Choose a saved PDF --</option>
-            </select>
-        </div>
-
-        <button id="submitBtn" type="submit" class="btn btn-primary mt-3">Generate Summary & Launch Quiz</button>
-    </form>
+<div class="page-header">
+    <div>
+        <h1>EduSathi</h1>
+        <p class="subtitle">Upload your study material and let AI turn it into summaries, practice questions and quizzes.</p>
+    </div>
+    <span class="badge-pill"><i class="bi bi-stars"></i> AI-powered</span>
 </div>
 
-@section Scripts {
-    <script>
-        document.getElementById('uploadForm').addEventListener('submit', function () {
-            var btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating summary and questions... Please wait.';
-        });
-    </script>
+<form id="uploadForm" asp-action="ProcessSubmission" enctype="multipart/form-data" method="post">
+
+    <div class="card">
+        <h2>Upload a PDF</h2>
+        <p class="desc" style="margin-bottom:16px;">Lecture notes, textbook chapters, or past papers — anything you need to master.</p>
+
+        <div asp-validation-summary="All" class="field-errors"></div>
+
+        <div class="upload-box" data-dropzone>
+            <!-- Changed to a label linked to the NewPdfFile input so clicking the icon opens the file browser -->
+            <label class="icon-circle" for="NewPdfFile" style="cursor: pointer;">
+                <i class="bi bi-cloud-arrow-up"></i>
+            </label>
+
+            <div class="upload-title">
+                Drag &amp; drop your PDF here, or
+                <button type="button" class="btn-link-orange" data-dropzone-browse>browse</button>
+            </div>
+            <div class="upload-sub">PDF only · up to 20 MB</div>
+
+            <input asp-for="NewPdfFile" type="file" accept=".pdf" class="file-input-hidden" data-dropzone-input />
+
+            <span class="upload-sub" data-dropzone-filename
+                  style="display:block;margin-top:10px;font-weight:600;color:#0F172A;"></span>
+        </div>
+
+        @if (Model.PreviousDocuments.Any())
+        {
+            <div class="or-divider">OR</div>
+
+            <div class="field-label">Use a document you've already uploaded</div>
+
+            @foreach (var doc in Model.PreviousDocuments)
+            {
+                <label class="list-item doc-option" style="margin-bottom:10px;">
+                    @* checked written out by hand rather than checked="@@bool" - a stray
+                       checked="False" would preselect every row. *@
+                    @if (Model.SelectedExistingDocumentId == doc.Id)
+                    {
+                        <input class="doc-radio" type="radio" name="SelectedExistingDocumentId" value="@doc.Id" checked />
+                    }
+                    else
+                    {
+                        <input class="doc-radio" type="radio" name="SelectedExistingDocumentId" value="@doc.Id" />
+                    }
+                    <div class="icon-circle orange"><i class="bi bi-file-earmark-text-fill"></i></div>
+                    <div class="info">
+                        <div class="title">@doc.FileName</div>
+                        <div class="meta">Uploaded @doc.UploadedAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")</div>
+                    </div>
+                    <i class="bi bi-check-circle-fill doc-check"></i>
+                </label>
+            }
+        }
+
+        <div class="upload-actions">
+            <button id="submitBtn" type="submit" class="btn btn-primary">Generate Summary &amp; Launch Quiz</button>
+        </div>
+    </div>
+</form>
+
+@if (Model.PreviousDocuments.Any())
+{
+    var latest = Model.PreviousDocuments.First();
+    <a class="list-item current" asp-action="QuizSession" asp-route-id="@latest.Id">
+        <div class="icon-circle orange"><i class="bi bi-file-earmark-text-fill"></i></div>
+        <div class="info">
+            <div class="meta" style="text-transform:uppercase;font-size:10.5px;font-weight:700;letter-spacing:.05em;">Current document</div>
+            <div class="title">@latest.FileName</div>
+        </div>
+        <div class="meta-right">Open <i class="bi bi-arrow-right"></i></div>
+    </a>
 }
+
+<div class="card-row">
+    <div class="card">
+        <div class="icon-circle blue" style="margin-bottom:10px;"><i class="bi bi-book-half"></i></div>
+        <h3>Smart summaries</h3>
+        <p class="desc">Key points and takeaways extracted in seconds.</p>
+    </div>
+    <div class="card">
+        <div class="icon-circle orange" style="margin-bottom:10px;"><i class="bi bi-ui-checks"></i></div>
+        <h3>Adaptive practice</h3>
+        <p class="desc">Basic, medium and hard questions built from your file.</p>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var form = document.getElementById('uploadForm');
+        var btn = document.getElementById('submitBtn');
+        if (!form || !btn) return;
+        var originalHtml = btn.innerHTML;
+
+        form.addEventListener('submit', function () {
+            btn.disabled = true;
+            btn.textContent = 'Generating summary and questions... Please wait.';
+        });
+
+        // Restore the button if the user comes back via the browser's Back button.
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        });
+    })();
+</script>

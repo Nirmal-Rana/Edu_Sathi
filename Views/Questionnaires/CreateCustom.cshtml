@@ -1,0 +1,88 @@
+﻿@*
+    Views/Questionnaires/CreateCustom.cshtml — NEW FILE.
+
+    Posts to QuestionnairesController.CreateCustom. Reuses the exact building
+    blocks already in edusathi.css/js rather than inventing new ones:
+      - .upload-box / data-dropzone            (multi-file drop, see edusathi.js)
+      - .doc-option / .doc-radio checkbox rows  (multi-select instead of Exam/Index's radios)
+      - .pill-group / data-pill-group            (Solo vs Global category picker)
+*@
+@model EduSathi.ViewModels.CreateRoomViewModel
+
+@{
+    ViewData["Title"] = "Create Custom Quiz Room";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Create Custom Quiz Room</h1>
+        <p class="subtitle">Upload one or more PDFs or pick from your saved files, choose your category, and generate your room.</p>
+    </div>
+    <a class="btn-back" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<form asp-action="CreateCustom" enctype="multipart/form-data" method="post">
+    <div class="card">
+        <div asp-validation-summary="All" class="field-errors"></div>
+
+        <div class="field-label">Room / Quiz Name</div>
+        <input type="text" name="Name" value="@Model.Name" class="auth-input" placeholder="e.g. Midterm Preparation Hub" style="margin-bottom:22px;" />
+
+        <div class="field-label">Upload New PDFs From Device (multiple allowed)</div>
+        <div class="upload-box" data-dropzone>
+            <div class="icon-circle"><i class="bi bi-cloud-arrow-up"></i></div>
+            <div class="upload-title">
+                Drag &amp; drop PDFs here, or
+                <button type="button" class="btn-link-orange" data-dropzone-browse>browse</button>
+            </div>
+            <div class="upload-sub">PDF only · up to 20 MB each · hold Ctrl/Shift to pick several</div>
+
+            <input type="file" name="NewPdfFiles" accept=".pdf" multiple class="file-input-hidden" data-dropzone-input />
+
+            <span class="upload-sub" data-dropzone-filename
+                  style="display:block;margin-top:10px;font-weight:600;color:#0F172A;"></span>
+        </div>
+
+        @if (Model.PreviousDocuments.Any())
+        {
+            <div class="or-divider">OR</div>
+
+            <div class="field-label">Select from previously uploaded PDFs</div>
+
+            @foreach (var doc in Model.PreviousDocuments)
+            {
+                <label class="list-item doc-option" style="margin-bottom:10px;">
+                    <input class="doc-radio" type="checkbox" name="SelectedExistingDocumentIds" value="@doc.Id" />
+                    <div class="icon-circle orange"><i class="bi bi-file-earmark-text-fill"></i></div>
+                    <div class="info">
+                        <div class="title">@doc.FileName</div>
+                        <div class="meta">Uploaded @doc.UploadedAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")</div>
+                    </div>
+                    <i class="bi bi-check-circle-fill doc-check"></i>
+                </label>
+            }
+        }
+
+        <div class="or-divider">&nbsp;</div>
+
+        <div class="field-label">Select Category</div>
+        <div class="pill-group" data-pill-group="Category">
+            <button type="button" class="pill-btn selected mode-purple" data-value="Solo">
+                <i class="bi bi-person-fill"></i> Solo
+            </button>
+            <button type="button" class="pill-btn" data-value="Global">
+                <i class="bi bi-globe2"></i> Global (Live Room)
+            </button>
+        </div>
+        <input type="hidden" name="Category" data-pill-target="Category" value="Solo" />
+        <p class="desc" style="margin:-8px 0 20px 0;">
+            <strong>Solo</strong> generates private MCQs exclusively for your personal practice.
+            <strong>Global</strong> creates a shared live room with a code so peers can join and compete in real-time.
+        </p>
+
+        <div class="upload-actions">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-stars"></i> Generate Questions &amp; Launch Room</button>
+        </div>
+    </div>
+</form>

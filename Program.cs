@@ -1,4 +1,5 @@
 using EduSathi.Data;
+using EduSathi.Hubs;
 using EduSathi.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -53,5 +54,8 @@ app.MapControllerRoute(
 
 // 5. Map Razor Pages (Required for Identity Login/Register UI pages)
 app.MapRazorPages();
+
+// 6. Realtime hub backing the Questionnaires live room lobby.
+app.MapHub<RoomHub>("/hubs/room");
 
 app.Run();
