@@ -423,6 +423,31 @@ namespace EduSathi.Controllers
             return View("RoomQuiz", vm);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetAndPracticeAgain(int roomId, string? roomCode)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var participant = await _context.QuizRoomParticipants
+                .FirstOrDefaultAsync(p => p.QuizRoomId == roomId && p.UserId == userId);
+
+            if (participant != null)
+            {
+                participant.Score = null;
+                participant.TotalQuestions = null;
+                participant.CompletedAt = null;
+                await _context.SaveChangesAsync();
+            }
+
+            if (!string.IsNullOrEmpty(roomCode))
+            {
+                return RedirectToAction(nameof(RoomQuiz), new { roomCode = roomCode });
+            }
+
+            return RedirectToAction(nameof(RoomQuiz), new { id = roomId });
+        }
+
         public async Task<IActionResult> MyQuizzes()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -524,9 +549,12 @@ namespace EduSathi.Controllers
         private RoomQuizViewModel BuildQuizViewModel(QuizRoom room, QuizRoomParticipant me)
         {
             var documentIds = room.Documents.Select(d => d.UploadedDocumentId).ToList();
+
+            // Randomly shuffle questions on each load/retry so "Practice Again" feels fresh
             var questions = _context.Questions
                 .Where(q => documentIds.Contains(q.UploadedDocumentId))
-                .OrderBy(q => q.UploadedDocumentId).ThenBy(q => q.Level).ThenBy(q => q.Id)
+                .AsEnumerable()
+                .OrderBy(q => Guid.NewGuid())
                 .ToList();
 
             var vm = new RoomQuizViewModel

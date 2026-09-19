@@ -13,14 +13,28 @@
         <h1>Study Guide &amp; Summary</h1>
         <p class="subtitle">Document: <strong>@Model.FileName</strong> &bull; Uploaded on @Model.UploadedAt.ToLocalTime().ToString("MMM dd, yyyy")</p>
     </div>
-    <div>
+    <div style="display:flex; gap:10px; align-items:center;" class="action-buttons-group">
+        <!-- Text-to-Speech Audio Button for Hackathon Demo -->
+        <button type="button" id="speak-btn" class="btn btn-outline-secondary" style="display:inline-flex; align-items:center; gap:6px; border-radius:10px; background:#fff;">
+            <i class="bi bi-volume-up-fill" id="speak-icon"></i> <span id="speak-text">Listen to Summary</span>
+        </button>
+
+        <button type="button" id="copy-btn" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('raw-markdown').value); alert('Summary copied to clipboard!');" style="border-radius:10px; background:#fff;">
+            <i class="bi bi-clipboard"></i> Copy Summary
+        </button>
+
+        <!-- Export PDF / Print Button -->
+        <button type="button" onclick="window.print()" class="btn btn-outline-primary" style="border-radius: 10px; background:#fff; font-weight: 600;">
+            <i class="bi bi-file-earmark-pdf"></i> Export PDF
+        </button>
+
         <a asp-controller="Questionnaires" asp-action="RoomQuiz" asp-route-id="@Model.Id" class="btn btn-primary">
             <i class="bi bi-play-fill"></i> Launch Practice Quiz &rarr;
         </a>
     </div>
 </div>
 
-<div class="card" style="margin-bottom:3rem; background:#fff; color:#0b1226;">
+<div class="card printable-card" style="margin-bottom:3rem; background:#fff; color:#0b1226;">
     <!-- Rendered Markdown HTML will be placed here -->
     <div id="summary-content" class="markdown-body">
         <div class="text-center py-5">
@@ -45,6 +59,62 @@
                 summaryContainer.innerHTML = marked.parse(rawMarkdown);
             } else {
                 summaryContainer.innerHTML = "<div class='alert alert-warning' style='background:rgba(255,193,7,0.1); border:1px solid rgba(255,193,7,0.3); color:#856404; padding:12px; border-radius:10px;'>No summary content available for this document.</div>";
+            }
+
+            // --- Browser Text-to-Speech Audio Integration ---
+            const speakBtn = document.getElementById("speak-btn");
+            const speakIcon = document.getElementById("speak-icon");
+            const speakLabel = document.getElementById("speak-text");
+
+            if ('speechSynthesis' in window) {
+                let isSpeaking = false;
+
+                speakBtn.addEventListener("click", function () {
+                    const synth = window.speechSynthesis;
+
+                    if (!isSpeaking) {
+                        // Extract clean text from rendered HTML content
+                        const plainText = summaryContainer.innerText || summaryContainer.textContent;
+                        const utterance = new SpeechSynthesisUtterance(plainText);
+                        utterance.rate = 1.0;
+
+                        utterance.onstart = function () {
+                            isSpeaking = true;
+                            speakIcon.className = "bi bi-pause-fill";
+                            speakLabel.textContent = "Pause Audio";
+                            speakBtn.classList.add("btn-warning");
+                            speakBtn.classList.remove("btn-outline-secondary");
+                        };
+
+                        utterance.onend = function () {
+                            isSpeaking = false;
+                            synth.cancel();
+                            speakIcon.className = "bi bi-volume-up-fill";
+                            speakLabel.textContent = "Listen to Summary";
+                            speakBtn.classList.remove("btn-warning");
+                            speakBtn.classList.add("btn-outline-secondary");
+                        };
+
+                        synth.speak(utterance);
+                    } else {
+                        if (synth.speaking && !synth.paused) {
+                            synth.pause();
+                            speakIcon.className = "bi bi-play-fill";
+                            speakLabel.textContent = "Resume Audio";
+                        } else if (synth.paused) {
+                            synth.resume();
+                            speakIcon.className = "bi bi-pause-fill";
+                            speakLabel.textContent = "Pause Audio";
+                        }
+                    }
+                });
+
+                // Cancel speech when leaving page
+                window.addEventListener("beforeunload", function () {
+                    window.speechSynthesis.cancel();
+                });
+            } else {
+                speakBtn.style.display = "none";
             }
         });
     </script>
@@ -90,6 +160,27 @@
             padding: 0.2rem 0.4rem;
             border-radius: 6px;
             font-size: 0.875em;
+        }
+
+        /* --- Print / PDF Export Optimization Styles --- */
+        @@media print {
+            body * {
+                visibility: hidden;
+            }
+            .printable-card, .printable-card * {
+                visibility: visible;
+            }
+            .printable-card {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            .action-buttons-group, .page-header a, nav, aside, footer {
+                display: none !important;
+            }
         }
     </style>
 }

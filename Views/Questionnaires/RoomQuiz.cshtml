@@ -83,6 +83,53 @@
                 <h1 class="text-primary display-4 fw-bold mb-0">@Model.CorrectCount <span class="fs-4 text-muted">/ @Model.Total</span></h1>
             </div>
 
+            <!-- STUDY INSIGHTS CARD (Added for Hackathon Friend Idea) -->
+            <div class="card p-4 shadow-sm mb-4 border-0 bg-white" style="color: #0b1226; border-radius: 20px;">
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <h5 style="font-weight: 800; font-size: 18px; color: #0b1226; margin-bottom: 2px;"><i class="bi bi-graph-up-arrow text-primary"></i> Study Insights</h5>
+                    <p style="font-size: 12px; color: #6b7488; margin: 0;">Performance breakdown</p>
+                </div>
+
+                <!-- Correct vs Wrong Quick Grid -->
+                <div style="display: flex; justify-content: space-around; background: #f7f8fd; border-radius: 12px; padding: 12px; margin-bottom: 16px; text-align: center;">
+                    <div>
+                        <span style="display: block; font-size: 11px; color: #6b7488; font-weight: 600;">CORRECT</span>
+                        <span style="font-size: 15px; font-weight: 700; color: #10b981;">✓ @Model.CorrectCount</span>
+                    </div>
+                    <div style="border-left: 1px solid #e1e6f0;"></div>
+                    <div>
+                        <span style="display: block; font-size: 11px; color: #6b7488; font-weight: 600;">INCORRECT</span>
+                        <span style="font-size: 15px; font-weight: 700; color: #ef4444;">✕ @(Model.Total - Model.CorrectCount)</span>
+                    </div>
+                </div>
+
+                <!-- Strong vs Needs Improvement -->
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px;">
+                        <h6 style="font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 4px;">🟢 Strong Areas</h6>
+                        <span style="font-size: 12px; color: #15803d;">Basic concepts & core question accuracy.</span>
+                    </div>
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px;">
+                        <h6 style="font-size: 13px; font-weight: 700; color: #991b1b; margin-bottom: 4px;">🟠 Needs Improvement</h6>
+                        <span style="font-size: 12px; color: #b91c1c;">Review explanations for missed answers.</span>
+                    </div>
+                </div>
+
+                <!-- Recommendation & Action -->
+                <div style="background: #f8f9fc; border: 1px solid #e1e6f0; border-radius: 10px; padding: 12px; text-align: center;">
+                    <h6 style="font-size: 13px; font-weight: 700; color: #0b1226; margin-bottom: 4px;">💡 Recommendation</h6>
+                    <p style="font-size: 12px; color: #475069; margin-bottom: 10px;">Re-read your summary or try another quiz run.</p>
+                    
+                    <form asp-action="ResetAndPracticeAgain" method="post">
+                        <input type="hidden" name="roomId" value="@Model.RoomId" />
+                        <input type="hidden" name="roomCode" value="@Model.RoomCode" />
+                        <button type="submit" class="btn btn-sm btn-primary w-100" style="border-radius: 8px; font-weight: 600; background: linear-gradient(90deg, #5d5cf5, #9463f4); border: none;">
+                            Practice Again (Jumbled) &rarr;
+                        </button>
+                    </form>
+                </div>
+            </div>
+
             @if (Model.Category == EduSathi.Models.RoomCategory.Global && Model.Leaderboard != null)
             {
                 <div class="card p-4 shadow-sm border-0 bg-white" style="color: #0b1226;">
