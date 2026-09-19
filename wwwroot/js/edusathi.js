@@ -28,49 +28,59 @@
            <button data-dropzone-browse>browse</button>
          </div>
     */
-    function initDropzones() {
-        document.querySelectorAll("[data-dropzone]").forEach(function (zone) {
-            var input = zone.querySelector("[data-dropzone-input]");
-            var label = zone.querySelector("[data-dropzone-filename]");
-            var browse = zone.querySelector("[data-dropzone-browse]");
-            if (!input) return;
+function initDropzones() {
+    document.querySelectorAll("[data-dropzone]").forEach(function (zone) {
+        var input = zone.querySelector("[data-dropzone-input]");
+        var label = zone.querySelector("[data-dropzone-filename]");
+        var browse = zone.querySelector("[data-dropzone-browse]");
+        if (!input) return;
 
-            if (browse) {
-                browse.addEventListener("click", function () { input.click(); });
-            }
-
-            function showName() {
-                if (!label) return;
-                if (!input.files || !input.files.length) {
-                    label.textContent = "";
-                } else if (input.files.length === 1) {
-                    label.textContent = input.files[0].name;
-                } else {
-                    label.textContent = input.files.length + " files selected";
-                }
-            }
-
-            ["dragenter", "dragover"].forEach(function (evt) {
-                zone.addEventListener(evt, function (e) {
-                    e.preventDefault();
-                    zone.classList.add("dragover");
-                });
-            });
-            ["dragleave", "drop"].forEach(function (evt) {
-                zone.addEventListener(evt, function (e) {
-                    e.preventDefault();
-                    zone.classList.remove("dragover");
-                });
-            });
-            zone.addEventListener("drop", function (e) {
-                if (e.dataTransfer.files.length) {
-                    input.files = e.dataTransfer.files;
-                    showName();
-                }
-            });
-            input.addEventListener("change", showName);
+        // Clicking anywhere in the drop zone opens the file picker, except when
+        // the click originated on the input itself (native behaviour already
+        // handles that) or on the "browse" button (its own handler below already
+        // calls input.click(), so letting this one fire too would just be a
+        // harmless but pointless second call).
+        zone.addEventListener("click", function (e) {
+            if (e.target === input || (browse && browse.contains(e.target))) return;
+            input.click();
         });
-    }
+
+        if (browse) {
+            browse.addEventListener("click", function () { input.click(); });
+        }
+
+        function showName() {
+            if (!label) return;
+            if (!input.files || !input.files.length) {
+                label.textContent = "";
+            } else if (input.files.length === 1) {
+                label.textContent = input.files[0].name;
+            } else {
+                label.textContent = input.files.length + " files selected";
+            }
+        }
+
+        ["dragenter", "dragover"].forEach(function (evt) {
+            zone.addEventListener(evt, function (e) {
+                e.preventDefault();
+                zone.classList.add("dragover");
+            });
+        });
+        ["dragleave", "drop"].forEach(function (evt) {
+            zone.addEventListener(evt, function (e) {
+                e.preventDefault();
+                zone.classList.remove("dragover");
+            });
+        });
+        zone.addEventListener("drop", function (e) {
+            if (e.dataTransfer.files.length) {
+                input.files = e.dataTransfer.files;
+                showName();
+            }
+        });
+        input.addEventListener("change", showName);
+    });
+}
 
     /* ---------- Pill pickers (was pickPill() in QuestionnaireSolo.aspx) ----------
        Markup contract:
