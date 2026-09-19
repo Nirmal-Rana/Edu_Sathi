@@ -1,5 +1,5 @@
-﻿using EduSathi.Models;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using EduSathi.Models;
 
 namespace EduSathi.ViewModels
 {
@@ -9,9 +9,7 @@ namespace EduSathi.ViewModels
         public string FileName { get; set; } = string.Empty;
         public string Summary { get; set; } = string.Empty;
 
-        // Categorized questions for tiered difficulty levels
-        public List<Question> BasicQuestions { get; set; } = new List<Question>();
-        public List<Question> MediumQuestions { get; set; } = new List<Question>();
-        public List<Question> HardQuestions { get; set; } = new List<Question>();
+        // This holds the generated questions to display on the quiz page
+        public List<Question> Questions { get; set; } = new List<Question>();
     }
 }

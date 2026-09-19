@@ -15,20 +15,25 @@ using UglyToad.PdfPig;
 
 namespace EduSathi.Controllers
 {
+    // Single responsibility: accept a PDF (new upload or previously stored),
+    // extract its text, generate an AI summary, and persist the resulting
+    // UploadedDocument. Does not know anything about quiz questions, grading,
+    // or quiz history — that belongs to QuizController.
     [Authorize]
-    public class ExamController : Controller
+    public class SummaryController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
         private readonly GeminiService _geminiService;
 
-        public ExamController(ApplicationDbContext context, IWebHostEnvironment env, GeminiService geminiService)
+        public SummaryController(ApplicationDbContext context, IWebHostEnvironment env, GeminiService geminiService)
         {
             _context = context;
             _env = env;
             _geminiService = geminiService;
         }
 
+        // GET: /Summary
         public async Task<IActionResult> Index()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -45,6 +50,7 @@ namespace EduSathi.Controllers
             return View(viewModel);
         }
 
+        // POST: /Summary/ProcessSubmission
         [HttpPost]
         public async Task<IActionResult> ProcessSubmission(ExamDashboardViewModel model)
         {
@@ -106,27 +112,8 @@ namespace EduSathi.Controllers
                 return View("Index", model);
             }
 
-            return RedirectToAction(nameof(QuizSession), new { id = targetDocumentId });
-        }
-
-        public async Task<IActionResult> QuizSession(int id)
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var document = await _context.UploadedDocuments
-                .Include(d => d.Questions) // Include the generated questions
-                .FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId);
-
-            if (document == null) return NotFound();
-
-            var viewModel = new QuizSessionViewModel
-            {
-                DocumentId = document.Id,
-                FileName = document.FileName,
-                Summary = document.Summary,
-                Questions = document.Questions.ToList() // Pass the questions here!
-            };
-
-            return View(viewModel);
+            // Summary's job ends here — hand off to QuizController for the quiz experience.
+            return RedirectToAction("QuizSession", "Quiz", new { id = targetDocumentId });
         }
     }
 }

@@ -26,7 +26,7 @@ namespace EduSathi.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(string email, string password, string? returnUrl = null)
         {
-            returnUrl ??= Url.Action("Index", "Exam");
+            returnUrl ??= Url.Action("Index", "Summary");
 
             if (ModelState.IsValid)
             {
@@ -72,7 +72,7 @@ namespace EduSathi.Controllers
             if (result.Succeeded)
             {
                 await _signInManager.SignInAsync(user, isPersistent: false);
-                return RedirectToAction("Index", "Exam");
+                return RedirectToAction("Index", "Summary");
             }
 
             foreach (var error in result.Errors)

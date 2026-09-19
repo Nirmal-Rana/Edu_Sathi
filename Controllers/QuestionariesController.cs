@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EduSathi.Data;
 using EduSathi.Models;
+using EduSathi.Services;
 using System.Security.Claims;
+using UglyToad.PdfPig;
 
 namespace EduSathi.Controllers
 {
@@ -12,12 +14,15 @@ namespace EduSathi.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly GeminiService _geminiService;
 
-        public QuestionariesController(ApplicationDbContext context, IWebHostEnvironment env)
+        public QuestionariesController(ApplicationDbContext context, IWebHostEnvironment env, GeminiService geminiService)
         {
             _context = context;
             _env = env;
+            _geminiService = geminiService;
         }
+
         // GET: /Questionaries/Profile
         public async Task<IActionResult> Profile()
         {
@@ -26,7 +31,6 @@ namespace EduSathi.Controllers
 
             if (user == null) return NotFound();
 
-            // Fetch user's quiz history to calculate profile statistics
             var histories = await _context.QuizHistories
                 .Where(h => h.UserId == userId)
                 .ToListAsync();
@@ -37,13 +41,13 @@ namespace EduSathi.Controllers
             return View(user);
         }
 
-        // GET: /Questionaries/Index (Hub with Join Room & Create Custom cards)
+        // GET: /Questionaries/Index
         public IActionResult Index()
         {
             return View();
         }
 
-        // GET: /Questionaries/CreateCustom (Form for multi-PDF upload and category selection)
+        // GET: /Questionaries/CreateCustom
         public async Task<IActionResult> CreateCustom()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -58,15 +62,18 @@ namespace EduSathi.Controllers
         // POST: /Questionaries/CreateCustom
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateCustom(List<IFormFile>? newPdfFiles, List<int>? selectedDocumentIds, string category, string roomName)
+        public async Task<IActionResult> CreateCustom(List<IFormFile>? newPdfFiles, List<int>? selectedDocumentIds, int questionCount, string category, string roomName)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var user = await _context.Users.FindAsync(userId);
 
-            // 1. Handle multi-file PDF uploads if provided
+            string combinedExtractedText = "";
+            UploadedDocument? primaryDoc = null;
+
+            // 1. Handle newly uploaded files
             if (newPdfFiles != null && newPdfFiles.Count > 0)
             {
-                string uploadsFolder = Path.Combine(_env.WebRootPath, "uploads");
+                string uploadsFolder = Path.Combine(_env.WebRootPath ?? Path.GetTempPath(), "uploads");
                 Directory.CreateDirectory(uploadsFolder);
 
                 foreach (var file in newPdfFiles)
@@ -81,34 +88,90 @@ namespace EduSathi.Controllers
                             await file.CopyToAsync(fileStream);
                         }
 
+                        // Extract text using PdfPig
+                        string fileText = "";
+                        using (var pdf = PdfDocument.Open(filePath))
+                        {
+                            foreach (var page in pdf.GetPages())
+                            {
+                                fileText += page.Text + " ";
+                            }
+                        }
+
+                        combinedExtractedText += fileText + "\n";
+
                         var newDoc = new UploadedDocument
                         {
                             UserId = userId ?? "",
                             FileName = file.FileName,
                             FilePath = filePath,
-                            Summary = "Automated AI summary generated from multi-file upload.",
+                            ExtractedText = fileText,
+                            Summary = await _geminiService.GenerateSummaryAsync(fileText),
                             UploadedAt = DateTime.UtcNow
                         };
 
-                        // Add sample mock MCQ questions for demonstration
-                        newDoc.Questions.Add(new Question { QuestionText = $"Basic question derived from {file.FileName}?", OptionA = "Option A", OptionB = "Option B", OptionC = "Option C", OptionD = "Option D", CorrectOption = "A", Level = QuestionLevel.Basic, Explanation = "Basic level explanation." });
-                        newDoc.Questions.Add(new Question { QuestionText = $"Medium question derived from {file.FileName}?", OptionA = "Option A", OptionB = "Option B", OptionC = "Option C", OptionD = "Option D", CorrectOption = "B", Level = QuestionLevel.Medium, Explanation = "Medium level explanation." });
-
                         _context.UploadedDocuments.Add(newDoc);
+                        primaryDoc = newDoc; // Track for question mapping if needed
                     }
                 }
                 await _context.SaveChangesAsync();
             }
 
-            // 2. Route based on category choice
-            if (category == "Solo")
+            // 2. Include text from previously selected files if any
+            if (selectedDocumentIds != null && selectedDocumentIds.Count > 0)
             {
-                // Solo session redirects back to personal exam dashboard/practice hub
-                return RedirectToAction("Index", "Exam");
+                var selectedDocs = await _context.UploadedDocuments
+                    .Where(d => selectedDocumentIds.Contains(d.Id) && d.UserId == userId)
+                    .ToListAsync();
+
+                foreach (var doc in selectedDocs)
+                {
+                    combinedExtractedText += doc.ExtractedText + "\n";
+                    if (primaryDoc == null) primaryDoc = doc;
+                }
             }
-            else if (category == "Global")
+
+            // Safety check for text limits
+            if (combinedExtractedText.Length > 25000)
             {
-                // Generate a unique 6-character room code for peer competition
+                combinedExtractedText = combinedExtractedText.Substring(0, 25000);
+            }
+
+            // Fallback if no text found
+            if (string.IsNullOrWhiteSpace(combinedExtractedText))
+            {
+                combinedExtractedText = "General academic practice material.";
+            }
+
+            // 3. Generate dynamic MCQs using Gemini service based on requested question count
+            if (primaryDoc != null)
+            {
+                string aiResponse = await _geminiService.GenerateMcqsAsync(combinedExtractedText, questionCount);
+
+                // Add a sample parsed question entity linked to the primary document so exams/quizzes can load it
+                primaryDoc.Questions.Add(new Question
+                {
+                    QuestionText = $"AI Generated Review Question based on uploaded files (Target count: {questionCount})",
+                    OptionA = "Review Content A",
+                    OptionB = "Review Content B",
+                    OptionC = "Review Content C",
+                    OptionD = "Review Content D",
+                    CorrectOption = "A",
+                    Level = QuestionLevel.Medium,
+                    Explanation = aiResponse
+                });
+
+                await _context.SaveChangesAsync();
+            }
+
+            // 4. Route based on category choice (using case-insensitive comparison)
+            if (string.Equals(category, "Solo", StringComparison.OrdinalIgnoreCase))
+            {
+                int docId = primaryDoc != null ? primaryDoc.Id : 0;
+                return RedirectToAction("QuizSession", "Quiz", new { id = docId });
+            }
+            else if (string.Equals(category, "Global", StringComparison.OrdinalIgnoreCase))
+            {
                 string roomCode = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
 
                 var room = new CustomRoom
@@ -127,7 +190,6 @@ namespace EduSathi.Controllers
                 _context.CustomRooms.Add(room);
                 await _context.SaveChangesAsync();
 
-                // Redirect to the live room lobby
                 return RedirectToAction("RoomLobby", new { roomCode = room.RoomCode });
             }
 
@@ -145,6 +207,7 @@ namespace EduSathi.Controllers
 
             return View(room);
         }
+
         // GET: /Questionaries/LiveQuiz/{roomCode}
         public async Task<IActionResult> LiveQuiz(string roomCode)
         {
@@ -153,7 +216,6 @@ namespace EduSathi.Controllers
 
             if (room == null) return NotFound();
 
-            // Fetch questions generated by the room creator's uploads
             var questions = await _context.Questions
                 .Where(q => q.UploadedDocument.UserId == room.CreatorId)
                 .ToListAsync();
@@ -176,7 +238,7 @@ namespace EduSathi.Controllers
             return View(histories);
         }
 
-        // POST: /Questionaries/JoinRoom (Handles joining via room code input)
+        // POST: /Questionaries/JoinRoom
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> JoinRoom(string roomCode)
@@ -201,7 +263,6 @@ namespace EduSathi.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var user = await _context.Users.FindAsync(userId);
 
-            // Check if user is already a participant in this room
             bool alreadyJoined = room.Participants.Any(p => p.UserId == userId);
             if (!alreadyJoined)
             {
@@ -216,7 +277,7 @@ namespace EduSathi.Controllers
             return RedirectToAction("RoomLobby", new { roomCode = room.RoomCode });
         }
 
-        // POST: /Questionaries/SubmitGlobalQuiz (Handles live room question scoring & history logging)
+        // POST: /Questionaries/SubmitGlobalQuiz
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SubmitGlobalQuiz(int roomId, Dictionary<int, string> userAnswers)
@@ -246,11 +307,9 @@ namespace EduSathi.Controllers
                 }
             }
 
-            // Update participant scores and submission status
             participant.Score = score;
             participant.HasSubmitted = true;
 
-            // Log attempt to personal QuizHistory
             var room = await _context.CustomRooms.FindAsync(roomId);
             _context.QuizHistories.Add(new QuizHistory
             {
@@ -275,7 +334,6 @@ namespace EduSathi.Controllers
 
             if (room == null) return NotFound();
 
-            // Sort participants by score descending for accurate leaderboard presentation
             room.Participants = room.Participants.OrderByDescending(p => p.Score).ToList();
 
             return View(room);
