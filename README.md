@@ -1,56 +1,65 @@
-# Welcome to your Expo app 👋
+🎓 EduSathi: AI-Powered Collaborative Learning Platform
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An intelligent, real-time collaborative study platform designed to transform dense educational documents into interactive study guides, active-recall flashcards, and multiplayer quiz rooms.
+🚀 Key Features
 
-## Get started
+    📄 AI Document Parsing & Summarization: Upload study materials and leverage the Google Gemini API to generate structured, high-yield study guides.
 
-1. Install dependencies
+    🧠 Active-Recall Flashcard System: Automatically extracts core concepts into a sleek, card-flipping interface with short, memorable answers to minimize token rate limits and maximize student memory retention.
 
-   ```bash
-   npm install
-   ```
+    ⚡ Real-Time Multiplayer Study Rooms: Built using ASP.NET Core SignalR, allowing students to join live lobbies, invite friends, and compete in synchronized study sessions.
 
-2. Start the app
+    🎭 Dynamic Persona Switcher: Instantly transforms standard academic summaries into different tones (Gen-Z Slang, Strict Professor, or Pirate Captain) to match individual learning styles.
 
-   ```bash
-   npx expo start
-   ```
+    🎙️ Text-to-Speech Audio Integration: Built-in browser speech synthesis allowing students to listen to summaries hands-free during late-night cram sessions.
 
-In the output, you'll find options to open the app in a
+    ⏱️ Persistent Focus Timer: A built-in, layout-integrated study timer backed by localStorage to keep students focused.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+    🖨️ PDF & Print Export: Cleanly formatted print views optimized for exporting study guides into offline PDFs.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+🛠️ Tech Stack
 
-## Get a fresh project
+    Backend: ASP.NET Core MVC (.NET 10.0), C#, Entity Framework Core
 
-When you're ready, run:
+    Real-Time Communication: ASP.NET Core SignalR
 
-```bash
-npm run reset-project
-```
+    Database: Microsoft SQL Server & ASP.NET Core Identity (Authentication)
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+    AI Engine: Google Gemini API (gemini-1.5-flash)
 
-### Other setup steps
+    Frontend UI: Bootstrap, Razor Views (.cshtml), custom CSS, Marked.js, JavaScript
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+⚙️ Getting Started Locally
+Prerequisites
 
-## Learn more
+    .NET 10.0 SDK or higher installed on your machine.
 
-To learn more about developing your project with Expo, look at the following resources:
+    Microsoft SQL Server (LocalDB or SQL Server Express).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Installation & Running
 
-## Join the community
+    Clone the repository:
+    Bash
 
-Join our community of developers creating universal apps.
+    git clone https://github.com/Nirmal-Rana/Edu_Sathi.git
+    cd Edu_Sathi
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+    Configure your environment settings:
+    Create an appsettings.json or user secrets file with your database connection string and Google Gemini API key.
+
+    Run database migrations:
+    Bash
+
+    dotnet ef database update
+
+    Run the application:
+    Bash
+
+    dotnet run
+
+👨‍💻 Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
+📝 License
+
+This project is open source and available under the MIT License.
