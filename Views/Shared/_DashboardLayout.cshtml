@@ -1,0 +1,247 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var controller = (ViewContext.RouteData.Values["controller"] as string ?? "").ToLowerInvariant();
+    var action = (ViewContext.RouteData.Values["action"] as string ?? "").ToLowerInvariant();
+
+    var isHome = controller == "summary" && action == "index";
+    var isProfile = controller == "questionnaires" && action == "profile";
+    var isFriends = controller == "friends";
+    var isRoomInvites = controller == "questionnaires" && action == "roominvites";
+    var isQuestionnaires = controller == "questionnaires" && action != "roominvites" && action != "profile";
+    var isHistory = controller == "exam" && action == "history";
+
+    string displayName = User.Identity?.Name ?? "";
+    if (SignInManager.IsSignedIn(User))
+    {
+        var currentUser = await UserManager.GetUserAsync(User);
+        if (!string.IsNullOrWhiteSpace(currentUser?.FullName))
+        {
+            displayName = currentUser!.FullName;
+        }
+    }
+
+    var initials = "";
+    foreach (var part in displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+    {
+        if (initials.Length >= 2) break;
+        initials += char.ToUpperInvariant(part[0]);
+    }
+    if (initials.Length == 0) { initials = "?"; }
+}<!DOCTYPE html><html lang="en"><head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - EduSathi</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <link rel="stylesheet" href="~/css/edusathi.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)</head><body>
+    <div class="app-shell">
+
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-badge"><i class="bi bi-mortarboard-fill"></i></div>
+                <div class="logo-text">EduSathi</div>
+            </div>
+
+            <ul class="nav-list">
+                <li>
+                    <a class="nav-item @(isHome ? "active" : "")" asp-controller="Summary" asp-action="Index">
+                        <i class="bi bi-house-door-fill"></i><span>Home</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-item @(isProfile ? "active" : "")" asp-controller="Questionnaires" asp-action="Profile">
+                        <i class="bi bi-person-fill"></i><span>Profile</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-item @(isFriends ? "active" : "")" asp-controller="Friends" asp-action="Index">
+                        <i class="bi bi-people-fill"></i><span>Friends</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-item @(isRoomInvites ? "active" : "")" asp-controller="Questionnaires" asp-action="RoomInvites">
+                        <i class="bi bi-bell-fill"></i><span>Room Invites</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-item @(isQuestionnaires ? "active" : "")" asp-controller="Questionnaires" asp-action="Index">
+                        <i class="bi bi-patch-question-fill"></i><span>Questionnaires</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-item @(isHistory ? "active" : "")" asp-controller="Exam" asp-action="History">
+                        <i class="bi bi-clock-history"></i><span>History</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Focus Session Study Timer Widget (Persistent across page navigation) -->
+            <div style="margin: 16px 12px; padding: 12px; background: rgba(93, 92, 245, 0.06); border: 1px solid rgba(93, 92, 245, 0.15); border-radius: 12px; text-align: center;">
+                <div style="font-size: 12px; font-weight: 700; color: #0b1226; margin-bottom: 4px;">
+                    <i class="bi bi-stopwatch text-primary"></i> Focus Session
+                </div>
+                <div id="timer-display" style="font-size: 20px; font-weight: 800; color: #5d5cf5; margin-bottom: 8px;">25:00</div>
+                <button id="timer-btn" onclick="toggleTimer()" class="btn btn-sm btn-outline-primary w-100" style="border-radius: 8px; font-weight: 600; font-size: 11px; padding: 4px 8px;">Start Focus</button>
+            </div>
+
+            <div class="sidebar-footer">
+                @if (SignInManager.IsSignedIn(User))
+                {
+                    <a class="sidebar-user" asp-controller="Questionnaires" asp-action="Profile">
+                        <div class="avatar">@initials</div>
+                        <div>
+                            <div class="name">@displayName</div>
+                            <div class="streak"><i class="bi bi-mortarboard"></i> Keep going</div>
+                        </div>
+                    </a>
+
+                    <form class="w-100" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Summary", new { area = "" })"
+                          style="margin-top:12px;">
+                        <button type="submit" class="btn btn-secondary btn-block">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </button>
+                    </form>
+                }
+            </div>
+        </aside>
+
+        <main class="main-content">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/js/edusathi.js" asp-append-version="true"></script>
+    
+    <!-- Persistent Focus Timer Script using localStorage -->
+    <script>
+        let timerInterval;
+
+        function getTimerState() {
+            let timeLeft = localStorage.getItem("edusathi_timer_left");
+            let endTime = localStorage.getItem("edusathi_timer_end");
+            let isRunning = localStorage.getItem("edusathi_timer_running") === "true";
+
+            if (timeLeft === null) timeLeft = 1500; // Default 25 mins
+            else timeLeft = parseInt(timeLeft, 10);
+
+            return { timeLeft, endTime, isRunning };
+        }
+
+        function updateDisplay(seconds) {
+            let mins = Math.floor(seconds / 60);
+            let secs = seconds % 60;
+            const display = document.getElementById("timer-display");
+            if (display) {
+                display.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function syncTimer() {
+            let state = getTimerState();
+            const btn = document.getElementById("timer-btn");
+
+            if (state.isRunning && state.endTime) {
+                let now = Math.floor(Date.now() / 1000);
+                let remaining = parseInt(state.endTime, 10) - now;
+
+                if (remaining > 0) {
+                    updateDisplay(remaining);
+                    if (btn) {
+                        btn.textContent = "Pause";
+                        btn.classList.replace("btn-outline-primary", "btn-warning");
+                    }
+                    startInterval();
+                } else {
+                    resetTimer();
+                    alert("Focus session complete! Time for a quick break.");
+                }
+            } else {
+                updateDisplay(state.timeLeft);
+                if (btn) {
+                    btn.textContent = "Start Focus";
+                    btn.classList.replace("btn-warning", "btn-outline-primary");
+                }
+            }
+        }
+
+        function startInterval() {
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                let state = getTimerState();
+                if (state.isRunning && state.endTime) {
+                    let now = Math.floor(Date.now() / 1000);
+                    let remaining = parseInt(state.endTime, 10) - now;
+
+                    if (remaining > 0) {
+                        localStorage.setItem("edusathi_timer_left", remaining);
+                        updateDisplay(remaining);
+                    } else {
+                        clearInterval(timerInterval);
+                        resetTimer();
+                        alert("Focus session complete! Time for a quick break.");
+                    }
+                }
+            }, 1000);
+        }
+
+        function toggleTimer() {
+            let state = getTimerState();
+            const btn = document.getElementById("timer-btn");
+
+            if (!state.isRunning) {
+                let now = Math.floor(Date.now() / 1000);
+                let newEndTime = now + state.timeLeft;
+
+                localStorage.setItem("edusathi_timer_end", newEndTime);
+                localStorage.setItem("edusathi_timer_running", "true");
+
+                if (btn) {
+                    btn.textContent = "Pause";
+                    btn.classList.replace("btn-outline-primary", "btn-warning");
+                }
+                startInterval();
+            } else {
+                let now = Math.floor(Date.now() / 1000);
+                let remaining = parseInt(localStorage.getItem("edusathi_timer_end"), 10) - now;
+
+                localStorage.setItem("edusathi_timer_left", remaining > 0 ? remaining : 0);
+                localStorage.setItem("edusathi_timer_running", "false");
+                localStorage.removeItem("edusathi_timer_end");
+
+                clearInterval(timerInterval);
+
+                if (btn) {
+                    btn.textContent = "Resume";
+                    btn.classList.replace("btn-warning", "btn-outline-primary");
+                }
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            localStorage.setItem("edusathi_timer_left", 1500);
+            localStorage.setItem("edusathi_timer_running", "false");
+            localStorage.removeItem("edusathi_timer_end");
+            updateDisplay(1500);
+
+            const btn = document.getElementById("timer-btn");
+            if (btn) {
+                btn.textContent = "Start Focus";
+                btn.classList.replace("btn-warning", "btn-outline-primary");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            syncTimer();
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)</body></html>

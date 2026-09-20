@@ -1,0 +1,56 @@
+﻿@model EduSathi.ViewModels.QuizSessionViewModel
+@{
+    ViewData["Title"] = "Quiz - " + Model.FileName;
+}
+
+<div class="container mt-4 mb-5">
+    <h2>Quiz: @Model.FileName</h2>
+
+    <hr class="my-4" />
+
+    <h3 class="mb-4">Practice Quiz</h3>
+
+    @if (Model.Questions != null && Model.Questions.Any())
+    {
+        <form asp-action="SubmitQuiz" method="post">
+            <input type="hidden" name="documentId" value="@Model.DocumentId" />
+
+            @for (int i = 0; i < Model.Questions.Count; i++)
+            {
+                var q = Model.Questions[i];
+                <div class="card mb-3 p-3 shadow-sm">
+                    <h5 class="fw-bold">Q@(i + 1): @q.QuestionText</h5>
+
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="radio" name="userAnswers[@q.Id]" value="A" id="q@(q.Id)_a" required>
+                        <label class="form-check-label" for="q@(q.Id)_a">A) @q.OptionA</label>
+                    </div>
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="radio" name="userAnswers[@q.Id]" value="B" id="q@(q.Id)_b">
+                        <label class="form-check-label" for="q@(q.Id)_b">B) @q.OptionB</label>
+                    </div>
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="radio" name="userAnswers[@q.Id]" value="C" id="q@(q.Id)_c">
+                        <label class="form-check-label" for="q@(q.Id)_c">C) @q.OptionC</label>
+                    </div>
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="radio" name="userAnswers[@q.Id]" value="D" id="q@(q.Id)_d">
+                        <label class="form-check-label" for="q@(q.Id)_d">D) @q.OptionD</label>
+                    </div>
+                </div>
+            }
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-success btn-lg">Submit Quiz</button>
+                <a asp-controller="Summary" asp-action="Index" class="btn btn-secondary btn-lg ms-2">Back to Dashboard</a>
+            </div>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-warning">No questions available for this session yet.</div>
+        <div class="mt-3">
+            <a asp-controller="Summary" asp-action="Index" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+    }
+</div>

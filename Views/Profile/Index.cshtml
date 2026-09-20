@@ -1,0 +1,62 @@
+﻿@*
+    Views/Profile/Index.cshtml — NEW FILE.
+
+    Converted from Profile.aspx. The stat cards show real counts from the database;
+    "Avg. score" and "Day streak" from the original design are not shown, because
+    nothing records quiz attempts yet and a fabricated 82% / 7-day streak in a
+    shared repo is worse than an honest gap. See ProfilePageViewModel.
+
+    The Sign out row from Profile.aspx is not repeated here — the sidebar already
+    has the Identity logout form, and two sign-out controls on one screen is
+    clutter.
+*@
+@model EduSathi.ViewModels.ProfilePageViewModel
+
+@{
+    ViewData["Title"] = "Profile";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div><h1>Profile</h1></div>
+</div>
+
+<div class="card">
+    <div class="profile-header">
+        <div class="avatar">@Model.Initials</div>
+        <div>
+            <div class="name">@Model.DisplayName</div>
+            <div class="grade">@Model.Email</div>
+        </div>
+    </div>
+</div>
+
+<div class="card-row" style="margin-bottom:20px;">
+    <div class="stat-card">
+        <div class="icon-circle purple"><i class="bi bi-file-earmark-text"></i></div>
+        <div class="stat-value">@Model.DocumentCount</div>
+        <div class="stat-label">Documents</div>
+    </div>
+    <div class="stat-card">
+        <div class="icon-circle blue"><i class="bi bi-question-circle"></i></div>
+        <div class="stat-value">@Model.QuestionCount</div>
+        <div class="stat-label">Questions generated</div>
+    </div>
+    <div class="stat-card">
+        <div class="icon-circle green"><i class="bi bi-graph-up-arrow"></i></div>
+        @* TODO(backend): needs an attempt/score table before this can be a number. *@
+        <div class="stat-value">—</div>
+        <div class="stat-label">Avg. score</div>
+    </div>
+</div>
+
+<div class="card settings-list" style="padding:8px 24px;">
+    <div class="list-item" style="box-shadow:none;margin-bottom:0;border-bottom:1px solid var(--border-color);border-radius:0;padding:16px 0;">
+        <span class="info"><i class="bi bi-envelope"></i> <span class="label">Email</span></span>
+        <span class="meta-right">@Model.Email</span>
+    </div>
+    <div class="list-item" style="box-shadow:none;margin-bottom:0;padding:16px 0;">
+        <span class="info"><i class="bi bi-telephone"></i> <span class="label">Contact</span></span>
+        <span class="meta-right">@(string.IsNullOrWhiteSpace(Model.ContactNumber) ? "Not set" : Model.ContactNumber)</span>
+    </div>
+</div>

@@ -1,0 +1,120 @@
+﻿@model IEnumerable<EduSathi.Models.Question>
+
+@{
+    ViewData["Title"] = "Live Quiz Session";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+    var questionsList = Model.ToList();
+}
+
+<div class="container mt-4">
+    <div class="card shadow-sm border-0 p-4 bg-white">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold text-primary mb-0">Live Room Quiz</h4>
+            <div class="badge bg-danger fs-6 px-3 py-2">
+                Time Left: <span id="timer">10</span>s
+            </div>
+        </div>
+        <hr />
+
+        @if (!questionsList.Any())
+        {
+            <div class="text-center py-5">
+                <h5 class="text-muted">No questions available for this room yet.</h5>
+                <a asp-action="Index" class="btn btn-primary mt-3">Back to Hub</a>
+            </div>
+        }
+        else
+        {
+            <form id="quizForm" asp-action="SubmitGlobalQuiz" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="roomId" value="@ViewBag.RoomId" />
+
+                <div id="questionContainer">
+                    @for (int i = 0; i < questionsList.Count; i++)
+                    {
+                        var q = questionsList[i];
+                        <div class="quiz-step @(i == 0 ? "" : "d-none")" data-index="@i">
+                            <div class="mb-3">
+                                <span class="badge bg-secondary mb-2">Question @(i + 1) of @questionsList.Count</span>
+                                <h5 class="fw-bold text-dark">@q.QuestionText</h5>
+                            </div>
+
+                            <div class="list-group mb-4">
+                                <label class="list-group-item">
+                                    <input type="radio" name="userAnswers[@q.Id]" value="A" class="form-check-input me-2" /> @q.OptionA
+                                </label>
+                                <label class="list-group-item">
+                                    <input type="radio" name="userAnswers[@q.Id]" value="B" class="form-check-input me-2" /> @q.OptionB
+                                </label>
+                                <label class="list-group-item">
+                                    <input type="radio" name="userAnswers[@q.Id]" value="C" class="form-check-input me-2" /> @q.OptionC
+                                </label>
+                                <label class="list-group-item">
+                                    <input type="radio" name="userAnswers[@q.Id]" value="D" class="form-check-input me-2" /> @q.OptionD
+                                </label>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <button type="button" id="nextBtn" class="btn btn-primary px-4">Next Question</button>
+                </div>
+            </form>
+        }
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentStep = 0;
+        const steps = document.querySelectorAll('.quiz-step');
+        const totalSteps = steps.length;
+        const nextBtn = document.getElementById('nextBtn');
+        const quizForm = document.getElementById('quizForm');
+        const timerDisplay = document.getElementById('timer');
+
+        let timeLeft = 10;
+        let countdown;
+
+        function startTimer() {
+            timeLeft = 10;
+            timerDisplay.textContent = timeLeft;
+            clearInterval(countdown);
+
+            countdown = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(countdown);
+                    moveToNextStep();
+                }
+            }, 1000);
+        }
+
+        function moveToNextStep() {
+            steps[currentStep].classList.add('d-none');
+            currentStep++;
+
+            if (currentStep < totalSteps) {
+                steps[currentStep].classList.remove('d-none');
+                if (currentStep === totalSteps - 1) {
+                    nextBtn.textContent = "Submit Quiz";
+                }
+                startTimer();
+            } else {
+                clearInterval(countdown);
+                quizForm.submit();
+            }
+        }
+
+        if (totalSteps > 0) {
+            startTimer();
+            nextBtn.addEventListener('click', () => {
+                clearInterval(countdown);
+                moveToNextStep();
+            });
+        }
+    </script>
+}

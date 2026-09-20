@@ -1,0 +1,367 @@
+﻿@model EduSathi.ViewModels.CreateRoomViewModel
+
+@{
+    ViewData["Title"] = "Create Custom Quiz Room";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+    var hasSaved = Model.PreviousDocuments != null && Model.PreviousDocuments.Any();
+}
+
+<style>
+    .cq-card { background: #fff; border-radius: 22px; padding: 22px; color: #0b1226; box-shadow: 0 24px 60px -30px rgba(0,0,0,.6); }
+    .cq-card, .cq-card * { box-sizing: border-box; }
+    .cq-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: stretch; }
+    .cq-source { display: flex; flex-direction: column; min-width: 0; }
+
+    .cq-label { display: block; margin: 0 0 7px; font-size: 13px; font-weight: 700; color: #26304a; }
+    .cq-block { margin-top: 16px; }
+
+    /* ---------- room name ---------- */
+    .cq-input { width: 100%; height: 42px; padding: 0 14px; border: 1px solid #e1e6f0; border-radius: 12px; background: #f8f9fc; font: inherit; font-size: 14px; color: #0b1226; outline: none; transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
+    .cq-input::placeholder { color: #8b94a8; }
+    .cq-input:focus { border-color: #7c5cf5; background: #fff; box-shadow: 0 0 0 3px rgba(124,92,245,.15); }
+
+    /* ---------- compact upload ---------- */
+    .cq-drop { position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 16px; border: 1.5px dashed #cfd6e6; border-radius: 14px; background: #fafbff; cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
+    .cq-drop:hover, .cq-drop.is-over { border-color: #7c5cf5; background: #f4f1ff; }
+    .cq-drop:focus-within { border-color: #7c5cf5; box-shadow: 0 0 0 3px rgba(124,92,245,.15); }
+    .cq-drop input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .cq-drop-ic { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #8b6bf7, #6f5af2); color: #fff; font-size: 19px; box-shadow: 0 8px 18px -8px rgba(124,92,245,.8); }
+    .cq-drop-t { display: block; font-size: 14px; font-weight: 600; color: #0b1226; }
+    .cq-drop-t b { color: #ff6a13; font-weight: 700; }
+    .cq-drop-s { display: block; margin-top: 2px; font-size: 12px; color: #6b7488; }
+
+    .cq-chips { display: none; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 96px; overflow: auto; }
+    .cq-chips.has-items { display: flex; }
+    .cq-chip { display: flex; align-items: center; gap: 9px; padding: 6px 8px 6px 10px; border: 1px solid #ddd6ff; border-radius: 10px; background: #f1efff; font-size: 13px; }
+    .cq-chip > .bi { color: #6f5af2; font-size: 15px; }
+    .cq-chip-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #26204d; }
+    .cq-chip-size { font-size: 11.5px; color: #6b7488; white-space: nowrap; }
+    .cq-chip button { width: 22px; height: 22px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #6b7488; font-size: 11px; cursor: pointer; }
+    .cq-chip button:hover { background: rgba(0,0,0,.07); color: #0b1226; }
+
+    /* ---------- OR divider ---------- */
+    .cq-or { display: flex; align-items: center; gap: 12px; margin: 14px 0 12px; font-size: 12px; font-weight: 600; color: #6b7488; }
+    .cq-or::before, .cq-or::after { content: ""; flex: 1; height: 1px; background: #e6eaf4; }
+
+    /* ---------- saved PDFs ---------- */
+    .cq-saved { list-style: none; margin: 0; padding: 0 2px 2px 0; display: flex; flex-direction: column; gap: 8px; max-height: 170px; overflow: auto; }
+    .cq-file { display: block; position: relative; cursor: pointer; }
+    .cq-file input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 2; }
+    .cq-row { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border: 1px solid #e6eaf4; border-radius: 14px; background: #fff; transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease; }
+    .cq-file:hover .cq-row { border-color: #cfc6ff; }
+    .cq-file input:focus-visible + .cq-row { outline: 2px solid #7c5cf5; outline-offset: 2px; }
+    .cq-file input:checked + .cq-row { border-color: #7c5cf5; background: #f6f3ff; box-shadow: 0 0 0 3px rgba(124,92,245,.10); }
+    .cq-file-ic { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: #fff1e6; color: #ff7a1a; font-size: 16px; }
+    .cq-file-txt { flex: 1; min-width: 0; }
+    .cq-file-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 700; color: #0b1226; }
+    .cq-file-when { display: block; margin-top: 1px; font-size: 12px; color: #6b7488; }
+    .cq-tick { width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid #cfd6e6; color: transparent; font-size: 11px; transition: all .15s ease; }
+    .cq-file input:checked + .cq-row .cq-tick { background: #7c5cf5; border-color: #7c5cf5; color: #fff; }
+    .cq-empty { padding: 14px; border: 1.5px dashed #e1e6f0; border-radius: 14px; text-align: center; font-size: 13px; color: #6b7488; }
+
+    /* ---------- settings panel ---------- */
+    .cq-settings { display: flex; flex-direction: column; gap: 16px; padding: 18px; border: 1px solid #e8ebf5; border-radius: 18px; background: #f7f8fd; }
+    .cq-set-head { display: flex; align-items: center; gap: 12px; }
+    .cq-tile { width: 38px; height: 38px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, #8b6bf7, #6f5af2); color: #fff; font-size: 17px; }
+    .cq-set-head h2 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: #0b1226; }
+    .cq-set-head p { margin: 2px 0 0; font-size: 12px; color: #6b7488; }
+
+    .cq-seg { display: grid; gap: 8px; }
+    .cq-seg.c2 { grid-template-columns: repeat(2, 1fr); }
+    .cq-seg.c4 { grid-template-columns: repeat(4, 1fr); }
+    .cq-opt { position: relative; }
+    .cq-opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 2; }
+    .cq-opt label { display: flex; align-items: center; justify-content: center; gap: 7px; height: 38px; margin: 0; border: 1px solid #e1e6f0; border-radius: 999px; background: #fff; font-size: 13.5px; font-weight: 600; color: #475069; white-space: nowrap; transition: all .15s ease; }
+    .cq-opt:hover label { border-color: #cfc6ff; }
+    .cq-opt input:focus-visible + label { outline: 2px solid #7c5cf5; outline-offset: 2px; }
+
+    .cq-opt.count input:checked + label,
+    .cq-opt.mode input:checked + label   { background: #ece9ff; border-color: #7c5cf5; color: #5a3fd8; }
+
+    .cq-hint { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: #6b7488; }
+    .cq-hint strong { color: #26304a; }
+
+    .cq-actions { margin-top: auto; }
+    .cq-error { display: none; margin: 0 0 10px; padding: 9px 12px; border-radius: 10px; background: #fdecef; color: #b4233f; font-size: 12.5px; font-weight: 600; line-height: 1.4; }
+    .cq-error.show { display: block; }
+    .cq-summary { margin: 0 0 10px; font-size: 12px; text-align: center; color: #6b7488; }
+    .cq-summary strong { color: #26304a; font-weight: 700; }
+    .cq-submit { width: 100%; height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: 14px; background: linear-gradient(90deg, #5d5cf5, #9463f4); color: #fff; font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer; box-shadow: 0 14px 28px -12px rgba(111,90,242,.9); transition: filter .15s ease, transform .15s ease, opacity .15s ease; }
+    .cq-submit:hover { filter: brightness(1.07); }
+    .cq-submit:active { transform: translateY(1px); }
+    .cq-submit:disabled { opacity: .65; cursor: progress; filter: none; }
+
+@@media (max-width: 900px) {
+        .cq-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+ @@media (max-width: 520px) {
+        .cq-card { padding: 16px; border-radius: 18px; }
+        .cq-drop { flex-direction: column; text-align: center; }
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1>Create Custom Quiz Room</h1>
+        <p class="subtitle">Upload PDFs or pick saved files, select your category, and generate your room.</p>
+    </div>
+    <a class="btn-back" asp-action="Index"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<form id="cqForm" asp-action="CreateCustom" enctype="multipart/form-data" method="post">
+    <div class="cq-card">
+        <div asp-validation-summary="All" class="field-errors"></div>
+
+        <div class="cq-grid">
+
+            <!-- ============ LEFT: sources ============ -->
+            <section class="cq-source" aria-label="Quiz source">
+
+                <div>
+                    <label class="cq-label" for="cqName">Room / quiz name</label>
+                    <input class="cq-input" id="cqName" type="text" name="Name" value="@Model.Name" maxlength="80"
+                           placeholder="e.g. Midterm Preparation Hub" autocomplete="off" />
+                </div>
+
+                <div class="cq-block">
+                    <span class="cq-label">Upload new PDFs from your device</span>
+                    <label class="cq-drop" id="cqDrop">
+                        <input type="file" id="cqFiles" name="NewPdfFiles" accept="application/pdf,.pdf" multiple />
+                        <span class="cq-drop-ic" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i></span>
+                        <span>
+                            <span class="cq-drop-t">Drag &amp; drop PDFs here, or <b>browse</b></span>
+                            <span class="cq-drop-s">PDF only, up to 20 MB each. Hold Ctrl/Shift to pick several.</span>
+                        </span>
+                    </label>
+                    <div class="cq-chips" id="cqChips" aria-live="polite"></div>
+                </div>
+
+                <div class="cq-or">OR</div>
+
+                <div>
+                    <span class="cq-label">Select from previously uploaded PDFs</span>
+                    @if (hasSaved)
+                    {
+                        <ul class="cq-saved">
+                            @foreach (var doc in Model.PreviousDocuments)
+                            {
+                                <li>
+                                    <label class="cq-file">
+                                        <input type="checkbox" name="SelectedExistingDocumentIds" value="@doc.Id" />
+                                        <span class="cq-row">
+                                            <span class="cq-file-ic" aria-hidden="true"><i class="bi bi-file-earmark-text-fill"></i></span>
+                                            <span class="cq-file-txt">
+                                                <span class="cq-file-name" title="@doc.FileName">@doc.FileName</span>
+                                                <span class="cq-file-when">Uploaded @doc.UploadedAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt")</span>
+                                            </span>
+                                            <span class="cq-tick" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
+                                        </span>
+                                    </label>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <div class="cq-empty">No saved PDFs yet. Upload one above and it will show up here next time.</div>
+                    }
+                </div>
+            </section>
+
+            <!-- ============ RIGHT: settings panel (bound to existing backend properties) ============ -->
+            <aside class="cq-settings" aria-label="Quiz settings">
+
+                <div class="cq-set-head">
+                    <span class="cq-tile" aria-hidden="true"><i class="bi bi-sliders"></i></span>
+                    <div>
+                        <h2>Quiz settings</h2>
+                        <p>Configure your room parameters.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="cq-label">Number of questions</span>
+                    <div class="cq-seg c4" role="radiogroup" aria-label="Number of questions">
+                        <div class="cq-opt count"><input type="radio" name="QuestionCount" id="cqQ5" value="5" /><label for="cqQ5">5</label></div>
+                        <div class="cq-opt count"><input type="radio" name="QuestionCount" id="cqQ10" value="10" checked /><label for="cqQ10">10</label></div>
+                        <div class="cq-opt count"><input type="radio" name="QuestionCount" id="cqQ15" value="15" /><label for="cqQ15">15</label></div>
+                        <div class="cq-opt count"><input type="radio" name="QuestionCount" id="cqQ20" value="20" /><label for="cqQ20">20</label></div>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="cq-label">Select category</span>
+                    <div class="cq-seg c2" role="radiogroup" aria-label="Category">
+                        <div class="cq-opt mode">
+                            <input type="radio" name="Category" id="cqCSolo" value="Solo" checked />
+                            <label for="cqCSolo"><i class="bi bi-person-fill"></i> Solo</label>
+                        </div>
+                        <div class="cq-opt mode">
+                            <input type="radio" name="Category" id="cqCGlobal" value="Global" />
+                            <label for="cqCGlobal"><i class="bi bi-globe2"></i> Global (Live)</label>
+                        </div>
+                    </div>
+                    <p class="cq-hint" id="cqHint"></p>
+                </div>
+
+                <div class="cq-actions">
+                    <div class="cq-error" id="cqError" role="alert"></div>
+                    <p class="cq-summary" id="cqSummary"></p>
+                    <button type="submit" class="cq-submit" id="cqSubmit">
+                        <i class="bi bi-stars"></i>
+                        <span id="cqSubmitLabel">Generate Questions</span>
+                    </button>
+                </div>
+            </aside>
+
+        </div>
+    </div>
+</form>
+
+<script>
+    (function () {
+        var form = document.getElementById('cqForm');
+        var input = document.getElementById('cqFiles');
+        var zone = document.getElementById('cqDrop');
+        var chips = document.getElementById('cqChips');
+        var errBox = document.getElementById('cqError');
+        var summary = document.getElementById('cqSummary');
+        var hint = document.getElementById('cqHint');
+        var btn = document.getElementById('cqSubmit');
+        var btnLabel = document.getElementById('cqSubmitLabel');
+        var MAX_BYTES = 20 * 1024 * 1024;
+        var files = [];
+
+        function checked(name) {
+            var el = form.querySelector('input[name="' + name + '"]:checked');
+            return el ? el.value : '';
+        }
+
+        function savedCount() {
+            return form.querySelectorAll('input[name="SelectedExistingDocumentIds"]:checked').length;
+        }
+
+        function showError(msg) {
+            errBox.textContent = msg || '';
+            errBox.classList.toggle('show', !!msg);
+        }
+
+        function fmtSize(bytes) {
+            return bytes >= 1048576
+                ? (bytes / 1048576).toFixed(1) + ' MB'
+                : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+        }
+
+        function syncInput() {
+            try {
+                var dt = new DataTransfer();
+                files.forEach(function (f) { dt.items.add(f); });
+                input.files = dt.files;
+            } catch (e) { }
+        }
+
+        function renderChips() {
+            chips.textContent = '';
+            files.forEach(function (f, i) {
+                var chip = document.createElement('div');
+                chip.className = 'cq-chip';
+
+                var icon = document.createElement('i');
+                icon.className = 'bi bi-file-earmark-pdf-fill';
+
+                var name = document.createElement('span');
+                name.className = 'cq-chip-name';
+                name.textContent = f.name;
+                name.title = f.name;
+
+                var size = document.createElement('span');
+                size.className = 'cq-chip-size';
+                size.textContent = fmtSize(f.size);
+
+                var rm = document.createElement('button');
+                rm.type = 'button';
+                rm.setAttribute('aria-label', 'Remove ' + f.name);
+                rm.innerHTML = '<i class="bi bi-x-lg"></i>';
+                rm.addEventListener('click', function () {
+                    files.splice(i, 1);
+                    syncInput();
+                    renderChips();
+                    updateSummary();
+                });
+
+                chip.appendChild(icon);
+                chip.appendChild(name);
+                chip.appendChild(size);
+                chip.appendChild(rm);
+                chips.appendChild(chip);
+            });
+            chips.classList.toggle('has-items', files.length > 0);
+        }
+
+        function addFiles(list) {
+            var problems = [];
+            Array.prototype.forEach.call(list, function (f) {
+                var isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+                if (!isPdf) { problems.push(f.name + ' is not a PDF'); return; }
+                if (f.size > MAX_BYTES) { problems.push(f.name + ' is over 20 MB'); return; }
+                var dup = files.some(function (x) { return x.name === f.name && x.size === f.size; });
+                if (!dup) files.push(f);
+            });
+            showError(problems.join('. '));
+            syncInput();
+            renderChips();
+            updateSummary();
+        }
+
+        function updateSummary() {
+            var n = files.length + savedCount();
+            var pdfs = n === 0 ? 'No PDF added yet' : '<strong>' + n + ' ' + (n === 1 ? 'PDF' : 'PDFs') + '</strong> selected';
+            summary.innerHTML = pdfs + ' &middot; ' + checked('QuestionCount') + ' questions &middot; ' + checked('Category');
+        }
+
+        function updateMode() {
+            var isGlobal = checked('Category') === 'Global';
+            btnLabel.textContent = isGlobal ? 'Generate Questions & Launch Room' : 'Generate Questions';
+            hint.innerHTML = isGlobal
+                ? '<strong>Global</strong> opens a shared live room with a code so peers can join and compete in real time.'
+                : '<strong>Solo</strong> makes private MCQs just for your own practice.';
+        }
+
+        input.addEventListener('change', function () { addFiles(input.files); });
+
+        ['dragenter', 'dragover'].forEach(function (ev) {
+            zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.add('is-over'); });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+            zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.remove('is-over'); });
+        });
+        zone.addEventListener('drop', function (e) {
+            if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+        });
+
+        form.addEventListener('change', function (e) {
+            if (e.target === input) return;
+            if (e.target.name === 'Category') updateMode();
+            showError('');
+            updateSummary();
+        });
+
+        form.addEventListener('submit', function (e) {
+            if (files.length + savedCount() === 0) {
+                e.preventDefault();
+                showError('Add at least one PDF, or pick one of your saved files.');
+                return;
+            }
+            btn.disabled = true;
+            btnLabel.textContent = 'Generating\u2026';
+        });
+
+        window.addEventListener('pageshow', function () {
+            btn.disabled = false;
+            updateMode();
+        });
+
+        updateMode();
+        updateSummary();
+    })();
+</script>

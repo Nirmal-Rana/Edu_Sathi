@@ -1,0 +1,165 @@
+﻿@model EduSathi.Models.UploadedDocument
+
+@{
+    ViewData["Title"] = "Study Summary - " + Model.FileName;
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div>
+        <a asp-action="Index" class="btn-back" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--text-muted); text-decoration:none; margin-bottom:8px;">
+            <i class="bi bi-arrow-left"></i> Back to Upload
+        </a>
+        <h1>Study Guide &amp; Summary</h1>
+        <p class="subtitle">Document: <strong>@Model.FileName</strong> &bull; Uploaded on @Model.UploadedAt.ToLocalTime().ToString("MMM dd, yyyy")</p>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+        <!-- Text-to-Speech Audio Button for Hackathon Demo -->
+        <button type="button" id="speak-btn" class="btn btn-outline-secondary" style="display:inline-flex; align-items:center; gap:6px; border-radius:10px; background:#fff;">
+            <i class="bi bi-volume-up-fill" id="speak-icon"></i> <span id="speak-text">Listen to Summary</span>
+        </button>
+
+        <button type="button" id="copy-btn" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('raw-markdown').value); alert('Summary copied to clipboard!');" style="border-radius:10px; background:#fff;">
+    <i class="bi bi-clipboard"></i> Copy Summary
+</button>
+
+
+<a asp-controller="Questionnaires" asp-action="Flashcards" asp-route-id="@Model.Id" class="btn btn-outline-success" style="border-radius: 10px; background:#fff; font-weight: 600;color : #000;">
+    <i class="bi bi-card-checklist"></i> Active Recall Flashcards
+</a>
+
+        <a asp-controller="Questionnaires" asp-action="RoomQuiz" asp-route-id="@Model.Id" class="btn btn-primary">
+            <i class="bi bi-play-fill"></i> Launch Practice Quiz &rarr;
+        </a>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:3rem; background:#fff; color:#0b1226;">
+    <!-- Rendered Markdown HTML will be placed here -->
+    <div id="summary-content" class="markdown-body">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Formatting your study guide...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Raw markdown stored in a hidden container for JavaScript to parse -->
+<textarea id="raw-markdown" style="display:none;">@Model.Summary</textarea>
+
+@section Scripts {
+    <!-- Marked.js to convert Markdown to clean HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const rawMarkdown = document.getElementById("raw-markdown").value;
+            const summaryContainer = document.getElementById("summary-content");
+
+            if (rawMarkdown && rawMarkdown.trim() !== "") {
+                summaryContainer.innerHTML = marked.parse(rawMarkdown);
+            } else {
+                summaryContainer.innerHTML = "<div class='alert alert-warning' style='background:rgba(255,193,7,0.1); border:1px solid rgba(255,193,7,0.3); color:#856404; padding:12px; border-radius:10px;'>No summary content available for this document.</div>";
+            }
+
+            // --- Browser Text-to-Speech Audio Integration ---
+            const speakBtn = document.getElementById("speak-btn");
+            const speakIcon = document.getElementById("speak-icon");
+            const speakLabel = document.getElementById("speak-text");
+
+            if ('speechSynthesis' in window) {
+                let isSpeaking = false;
+
+                speakBtn.addEventListener("click", function () {
+                    const synth = window.speechSynthesis;
+
+                    if (!isSpeaking) {
+                        // Extract clean text from rendered HTML content
+                        const plainText = summaryContainer.innerText || summaryContainer.textContent;
+                        const utterance = new SpeechSynthesisUtterance(plainText);
+                        utterance.rate = 1.0;
+
+                        utterance.onstart = function () {
+                            isSpeaking = true;
+                            speakIcon.className = "bi bi-pause-fill";
+                            speakLabel.textContent = "Pause Audio";
+                            speakBtn.classList.add("btn-warning");
+                            speakBtn.classList.remove("btn-outline-secondary");
+                        };
+
+                        utterance.onend = function () {
+                            isSpeaking = false;
+                            synth.cancel();
+                            speakIcon.className = "bi bi-volume-up-fill";
+                            speakLabel.textContent = "Listen to Summary";
+                            speakBtn.classList.remove("btn-warning");
+                            speakBtn.classList.add("btn-outline-secondary");
+                        };
+
+                        synth.speak(utterance);
+                    } else {
+                        if (synth.speaking && !synth.paused) {
+                            synth.pause();
+                            speakIcon.className = "bi bi-play-fill";
+                            speakLabel.textContent = "Resume Audio";
+                        } else if (synth.paused) {
+                            synth.resume();
+                            speakIcon.className = "bi bi-pause-fill";
+                            speakLabel.textContent = "Pause Audio";
+                        }
+                    }
+                });
+
+                // Cancel speech when leaving page
+                window.addEventListener("beforeunload", function () {
+                    window.speechSynthesis.cancel();
+                });
+            } else {
+                speakBtn.style.display = "none";
+            }
+        });
+    </script>
+    <style>
+        .markdown-body {
+            color: #26304a; /* Dark slate text for high contrast on white card */
+            font-family: inherit;
+            line-height: 1.7;
+            font-size: 15px;
+        }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+            margin-top: 1.75rem;
+            margin-bottom: 0.75rem;
+            font-weight: 700;
+            color: #0b1226; /* Deep dark heading color */
+        }
+        .markdown-body p {
+            margin-bottom: 1rem;
+            color: #3b4663;
+        }
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            color: #3b4663;
+        }
+        .markdown-body li {
+            margin-bottom: 0.4rem;
+        }
+        .markdown-body strong {
+            color: #0b1226;
+        }
+        .markdown-body pre {
+            background-color: #f7f8fd;
+            border: 1px solid #e1e6f0;
+            border-radius: 10px;
+            padding: 1rem;
+            overflow-x: auto;
+            color: #0b1226;
+        }
+        .markdown-body code {
+            background-color: #f0f3ff;
+            color: #5a3fd8;
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            font-size: 0.875em;
+        }
+    </style>
+}

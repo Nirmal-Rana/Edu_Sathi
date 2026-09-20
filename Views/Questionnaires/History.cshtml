@@ -1,0 +1,79 @@
+﻿@model IEnumerable<EduSathi.Models.QuizHistory>
+
+@{
+    ViewData["Title"] = "Quiz History";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Your Quiz History</h2>
+            <p class="text-muted mb-0">Track all quizzes you have participated in (Solo & Global rooms).</p>
+        </div>
+        <div class="bg-primary text-white px-4 py-2 rounded shadow-sm">
+            <span class="d-block small text-uppercase">Total Quizzes Attended</span>
+            <h3 class="fw-bold mb-0">@Model.Count()</h3>
+        </div>
+    </div>
+    <hr />
+
+    @if (!Model.Any())
+    {
+        <div class="card p-5 text-center border-0 shadow-sm bg-white">
+            <div class="card-body">
+                <i class="bi bi-journal-x display-4 text-muted mb-3"></i>
+                <h4 class="text-secondary fw-semibold">No Quiz History Yet</h4>
+                <p class="text-muted">Participate in Solo practice or join a Global room to see your results recorded here!</p>
+                <a asp-action="Index" class="btn btn-primary mt-2">Explore Questionaries</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0 bg-white">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Quiz / Room Title</th>
+                            <th>Category</th>
+                            <th>Score Secured</th>
+                            <th>Date Completed</th>
+                            <th class="text-end pe-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-semibold text-dark">
+                                    <i class="bi bi-file-earmark-text text-primary me-2"></i> @item.QuizTitle
+                                </td>
+                                <td>
+                                    @if (item.Category == "Global")
+                                    {
+                                        <span class="badge bg-success">Global Room</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary">Solo Practice</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-dark">@item.Score</span> / @item.TotalQuestions
+                                </td>
+                                <td class="text-muted small">
+                                    @item.CompletedAt.ToLocalTime().ToString("MMM dd, yyyy - hh:mm tt")
+                                </td>
+                                <td class="text-end pe-4">
+                                    <span class="badge bg-light text-success border">Completed</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

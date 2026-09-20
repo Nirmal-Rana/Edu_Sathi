@@ -1,0 +1,55 @@
+﻿@model EduSathi.ViewModels.ExamDashboardViewModel
+
+@{
+    ViewData["Title"] = "Exam Preparation Hub";
+    Layout = "~/Views/Shared/_DashboardLayout.cshtml";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Exam Preparation Hub</h1>
+        <p class="subtitle">Upload a new study PDF or choose from your saved files to generate summaries and practice quizzes.</p>
+    </div>
+</div>
+
+<form id="uploadForm" asp-action="ProcessSubmission" enctype="multipart/form-data" method="post">
+    <div class="card">
+        <div asp-validation-summary="All" class="field-errors" style="margin-bottom:16px;"></div>
+
+        <div class="field-label">Upload New PDF From Device</div>
+        <div class="upload-box" data-dropzone style="margin-bottom:16px;">
+            <div class="icon-circle" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i></div>
+            <div class="upload-title">
+                Drag &amp; drop your PDF here, or
+                <button type="button" class="btn-link-orange" data-dropzone-browse>browse</button>
+            </div>
+            <div class="upload-sub">PDF only · up to 20 MB</div>
+            <input asp-for="NewPdfFile" type="file" accept=".pdf" class="file-input-hidden" data-dropzone-input />
+            <span class="upload-sub" data-dropzone-filename style="display:block;margin-top:8px;font-weight:600;color:var(--text);"></span>
+        </div>
+
+        <div class="or-divider">OR</div>
+
+        <div class="field-label">Select from Previously Uploaded PDFs</div>
+        <select asp-for="SelectedExistingDocumentId" class="auth-input form-select" asp-items="@(new SelectList(Model.PreviousDocuments, "Id", "FileName"))" style="margin-bottom:24px;">
+            <option value="">-- Choose a saved PDF --</option>
+        </select>
+
+        <div class="upload-actions">
+            <button id="submitBtn" type="submit" class="btn btn-primary btn-lg" style="width:100%;">
+                <i class="bi bi-stars"></i> <span id="submitLabel">Generate Summary &amp; Launch Quiz</span>
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function() {
+            var btn = document.getElementById('submitBtn');
+            var label = document.getElementById('submitLabel');
+            btn.disabled = true;
+            label.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right:6px;"></span> Generating summary and questions... Please wait.';
+        });
+    </script>
+}
