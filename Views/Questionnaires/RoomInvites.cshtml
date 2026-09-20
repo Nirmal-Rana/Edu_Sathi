@@ -1,9 +1,9 @@
-﻿@*
+﻿room invitation.cs @*
     Views/Questionnaires/RoomInvites.cshtml — restyled to match EduSathi's dark UI.
     Bootstrap classes (container/card/list-group/text-primary/etc.) replaced with
     the existing .page-header/.card/.list-item/.chip-btn tokens.
 *@
-@model List<EduSathi.Models.CustomRoom>
+@model List<EduSathi.Models.QuizRoom>
 
 @{
     ViewData["Title"] = "Room Invitations";
@@ -33,10 +33,10 @@
             <div class="list-item" style="margin-bottom:10px;">
                 <div class="icon-circle orange"><i class="bi bi-collection-fill"></i></div>
                 <div class="info">
-                    <div class="title">@room.RoomName</div>
-                    <div class="meta">Room Code: <strong style="color:var(--primary);">@room.RoomCode</strong></div>
+                    <div class="title">@room.Name</div>
+                    <div class="meta">Room Code: <strong style="color:var(--primary);">@room.Code</strong></div>
                 </div>
-                <a asp-action="RoomLobby" asp-route-roomCode="@room.RoomCode" class="chip-btn blue">
+                <a asp-action="RoomLobby" asp-route-roomCode="@room.Code" class="chip-btn blue">
                     Enter Lobby <i class="bi bi-arrow-right"></i>
                 </a>
             </div>

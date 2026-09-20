@@ -46,6 +46,7 @@ namespace EduSathi.Controllers
             _mcqService = mcqService;
         }
 
+        [AllowAnonymous]
         public IActionResult Index() => View();
 
         [HttpPost]
@@ -157,7 +158,17 @@ namespace EduSathi.Controllers
             if (room == null) return NotFound();
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return RedirectToAction("Login", "Account", new { area = "Identity" });
+
             var me = room.Participants.FirstOrDefault(p => p.UserId == userId);
+
+            if (me == null && room.CreatorUserId == userId)
+            {
+                await AddParticipantIfMissingAsync(room, isHost: true);
+                room = await LoadRoomByCodeAsync(roomCode);
+                me = room?.Participants.FirstOrDefault(p => p.UserId == userId);
+            }
+
             if (me == null) return Forbid();
 
             if (room.IsStarted)
@@ -170,12 +181,12 @@ namespace EduSathi.Controllers
                 RoomId = room.Id,
                 Code = room.Code,
                 Name = room.Name,
-                IsHost = me.IsHost,
+                IsHost = me.IsHost || room.CreatorUserId == userId,
                 IsStarted = room.IsStarted,
                 Participants = room.Participants.OrderBy(p => p.JoinedAt).ToList()
             };
 
-            if (me.IsHost)
+            if (vm.IsHost)
             {
                 var participantUserIds = room.Participants.Select(p => p.UserId).ToHashSet();
 
@@ -209,7 +220,7 @@ namespace EduSathi.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var me = room.Participants.FirstOrDefault(p => p.UserId == userId);
-            if (me == null || !me.IsHost) return Forbid();
+            if (me == null || (!me.IsHost && room.CreatorUserId != userId)) return Forbid();
 
             if (!room.IsStarted)
             {
@@ -234,7 +245,7 @@ namespace EduSathi.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var me = room.Participants.FirstOrDefault(p => p.UserId == userId);
-            if (me == null || !me.IsHost) return Forbid();
+            if (me == null || (!me.IsHost && room.CreatorUserId != userId)) return Forbid();
 
             var alreadyIn = room.Participants.Any(p => p.UserId == friendUserId);
             if (!alreadyIn)
@@ -296,7 +307,6 @@ namespace EduSathi.Controllers
 
             if (room == null) return NotFound();
 
-            // AUTO-GENERATE QUESTIONS ON THE FLY IF NONE EXIST YET (Distributed across levels, targeting 10 total)
             var documentIds = room.Documents.Select(d => d.UploadedDocumentId).ToList();
             bool hasQuestions = await _context.Questions.AnyAsync(q => documentIds.Contains(q.UploadedDocumentId));
 
@@ -369,7 +379,7 @@ namespace EduSathi.Controllers
             var me = room.Participants.FirstOrDefault(p => p.UserId == currentUserId);
             if (me == null)
             {
-                await AddParticipantIfMissingAsync(room, isHost: false);
+                await AddParticipantIfMissingAsync(room, isHost: room.CreatorUserId == currentUserId);
                 me = room.Participants.FirstOrDefault(p => p.UserId == currentUserId);
                 if (me == null) return Forbid();
             }
@@ -550,7 +560,6 @@ namespace EduSathi.Controllers
         {
             var documentIds = room.Documents.Select(d => d.UploadedDocumentId).ToList();
 
-            // Randomly shuffle questions on each load/retry so "Practice Again" feels fresh
             var questions = _context.Questions
                 .Where(q => documentIds.Contains(q.UploadedDocumentId))
                 .AsEnumerable()
@@ -655,7 +664,6 @@ namespace EduSathi.Controllers
             _context.UploadedDocuments.Add(doc);
             await _context.SaveChangesAsync();
 
-            // Proportionally split the requested questionCount across Basic, Medium, and Hard levels
             int baseCount = questionCount / 3;
             int remainder = questionCount % 3;
 
@@ -735,14 +743,20 @@ namespace EduSathi.Controllers
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var myRooms = await _context.CustomRooms
+            if (string.IsNullOrEmpty(userId))
+            {
+                return RedirectToAction("Login", "Account", new { area = "Identity" });
+            }
+
+            var myRooms = await _context.QuizRooms
                 .Include(r => r.Participants)
-                .Where(r => r.IsActive && r.Participants.Any(p => p.UserId == userId && !p.HasSubmitted))
-                .OrderByDescending(r => r.Id)
+                .Where(r => r.Participants.Any(p => p.UserId == userId))
+                .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
             return View(myRooms);
         }
+
         [HttpGet]
         public async Task<IActionResult> Flashcards(int id)
         {
