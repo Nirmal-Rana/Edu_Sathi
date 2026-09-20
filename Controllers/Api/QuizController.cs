@@ -8,10 +8,10 @@ using EduSathi.Models;
 
 namespace EduSathi.Controllers.Api
 {
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    [ApiController]
     [Route("api/v1/[controller]")]
-    public class QuizController : ControllerBase
+    [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public class QuizController : ApiControllerBase
     {
         private readonly ApplicationDbContext _context;
 
@@ -91,7 +91,7 @@ namespace EduSathi.Controllers.Api
                 }
             }
 
-            // Update participant record (Removed non-existent HasSubmitted property)
+            // Update participant record
             var participant = room.Participants.FirstOrDefault(p => p.UserId == userId);
             if (participant != null)
             {
@@ -125,8 +125,87 @@ namespace EduSathi.Controllers.Api
                 }
             });
         }
+
+        // POST: /api/v1/quiz/generate
+        [HttpPost("generate")]
+        public async Task<IActionResult> GenerateQuiz([FromBody] QuizGenerateRequest model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { status = "error", code = "UNAUTHORIZED", message = "Invalid token." });
+
+            var document = await _context.UploadedDocuments
+                .Include(d => d.Questions)
+                .FirstOrDefaultAsync(d => d.Id == model.DocumentId && d.UserId == userId);
+
+            if (document == null)
+                return NotFound(new { status = "error", code = "DOC_NOT_FOUND", message = "Document not found." });
+
+            var questions = document.Questions.Select(q => new
+            {
+                id = q.Id.ToString(),
+                prompt = q.QuestionText,
+                options = new[]
+                {
+                    new { id = "a", label = "A", text = q.OptionA },
+                    new { id = "b", label = "B", text = q.OptionB },
+                    new { id = "c", label = "C", text = q.OptionC },
+                    new { id = "d", label = "D", text = q.OptionD }
+                },
+                correctOptionId = q.CorrectOption.ToLower()
+            }).ToList();
+
+            string mockQuizId = "q_" + Guid.NewGuid().ToString("N").Substring(0, 6);
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Quiz generated successfully",
+                data = new
+                {
+                    quizId = mockQuizId,
+                    questions = questions
+                }
+            });
+        }
+
+        // POST: /api/v1/quiz/rooms
+        [HttpPost("rooms")]
+        public async Task<IActionResult> CreateQuizRoom([FromBody] RoomCreateRequest model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { status = "error", code = "UNAUTHORIZED", message = "Invalid token." });
+
+            string roomCode = Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper();
+
+            var room = new QuizRoom
+            {
+                Code = roomCode,
+                Name = "Study Room " + roomCode,
+                CreatorUserId = userId  // <-- Change this from HostUserId to CreatorUserId
+            };
+
+            _context.QuizRooms.Add(room);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                status = "success",
+                message = "Room created successfully",
+                data = new
+                {
+                    roomCode = room.Code,
+                    ownerId = userId,
+                    documentId = model.DocumentId,
+                    quizId = model.QuizId,
+                    participants = new List<object>()
+                }
+            });
+        }
     }
 
+    // DTOs
     public class QuizSubmissionDto
     {
         public string RoomCode { get; set; } = string.Empty;
@@ -136,6 +215,19 @@ namespace EduSathi.Controllers.Api
     public class UserAnswerDto
     {
         public int QuestionId { get; set; }
-        public string SelectedOption { get; set; } = string.Empty; // e.g., "A", "B", "C", "D"
+        public string SelectedOption { get; set; } = string.Empty;
+    }
+
+    public class QuizGenerateRequest
+    {
+        public int DocumentId { get; set; }
+        public string Difficulty { get; set; } = "medium";
+        public int QuestionCount { get; set; } = 10;
+    }
+
+    public class RoomCreateRequest
+    {
+        public string QuizId { get; set; } = string.Empty;
+        public int DocumentId { get; set; }
     }
 }

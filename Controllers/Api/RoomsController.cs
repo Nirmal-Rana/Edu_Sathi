@@ -10,10 +10,8 @@ using EduSathi.Services;
 
 namespace EduSathi.Controllers.Api
 {
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class RoomsController : ControllerBase
+   
+    public class RoomsController : ApiControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;

@@ -8,9 +8,8 @@ using EduSathi.Models;
 
 namespace EduSathi.Controllers.Api
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
+   
+    public class AuthController : ApiControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;

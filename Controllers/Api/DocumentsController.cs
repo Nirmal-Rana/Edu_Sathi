@@ -12,10 +12,8 @@ using EduSathi.Services;
 
 namespace EduSathi.Controllers.Api
 {
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class DocumentsController : ControllerBase
+   
+    public class DocumentsController : ApiControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;

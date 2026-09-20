@@ -7,10 +7,8 @@ using EduSathi.Data;
 
 namespace EduSathi.Controllers.Api
 {
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class HistoryController : ControllerBase
+   
+    public class HistoryController : ApiControllerBase
     {
         private readonly ApplicationDbContext _context;
 

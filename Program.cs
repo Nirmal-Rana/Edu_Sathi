@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using EduSathi.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,41 +57,51 @@ builder.Services.AddHttpClient<EduSathi.Services.McqService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
+var builderApp = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+// 0. Support ngrok and reverse proxies by forwarding headers FIRST
+var forwardedHeaderOptions = new ForwardedHeadersOptions
 {
-    app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor |
+                       ForwardedHeaders.XForwardedProto
+};
+forwardedHeaderOptions.KnownNetworks.Clear();
+forwardedHeaderOptions.KnownProxies.Clear();
+builderApp.UseForwardedHeaders(forwardedHeaderOptions);
+
+if (!builderApp.Environment.IsDevelopment())
+{
+    builderApp.UseExceptionHandler("/Home/Error");
+    builderApp.UseHsts();
+    // Only enforce HTTPS redirection in non-development environments
+    builderApp.UseHttpsRedirection();
 }
 
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+builderApp.UseSwagger();
+builderApp.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "EduSathi API V1");
 });
 
-app.UseHttpsRedirection();
-app.UseRouting();
+builderApp.UseRouting();
 
 // 3. Authentication MUST come before Authorization
-app.UseAuthentication();
-app.UseAuthorization();
+builderApp.UseAuthentication();
+builderApp.UseAuthorization();
 
-app.MapStaticAssets();
+builderApp.MapStaticAssets();
 
-// 4. Route default traffic straight to your Summary page first
-app.MapControllerRoute(
+// 4. Route default traffic straight to your Home page
+builderApp.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Summary}/{action=Index}/{id?}")
+    pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 // 5. Map Razor Pages (Required for Identity Login/Register UI pages)
-app.MapRazorPages();
+builderApp.MapRazorPages();
 
 // 6. Realtime hub backing the Questionnaires live room lobby.
-app.MapHub<RoomHub>("/hubs/room");
+builderApp.MapHub<RoomHub>("/hubs/room");
 
-app.Run();
+builderApp.Run();

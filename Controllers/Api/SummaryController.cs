@@ -9,10 +9,8 @@ using EduSathi.Services;
 
 namespace EduSathi.Controllers.Api
 {
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class SummaryController : ControllerBase
+  
+    public class SummaryController : ApiControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly SummaryService _summaryService;

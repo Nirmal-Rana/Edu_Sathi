@@ -9,10 +9,8 @@ using EduSathi.Models;
 
 namespace EduSathi.Controllers.Api
 {
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class FriendsController : ControllerBase
+  
+    public class FriendsController : ApiControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
