@@ -1,24 +1,26 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using EduSathi.Data;
 using EduSathi.Services;
 
+
 namespace EduSathi.Controllers.Api
 {
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [ApiController]
     [Route("api/v1/[controller]")]
     public class SummaryController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly GeminiService _geminiService;
+        private readonly SummaryService _summaryService;
 
-        public SummaryController(ApplicationDbContext context, GeminiService geminiService)
+        public SummaryController(ApplicationDbContext context, SummaryService summaryService)
         {
             _context = context;
-            _geminiService = geminiService;
+            _summaryService = summaryService;
         }
 
         // GET: /api/v1/summary/{documentId}
@@ -32,14 +34,11 @@ namespace EduSathi.Controllers.Api
             if (doc == null)
                 return NotFound(new { status = "error", code = "DOC_NOT_FOUND", message = "Document not found." });
 
-            // If summary hasn't been generated yet, populate it
             if (string.IsNullOrEmpty(doc.Summary) && !string.IsNullOrEmpty(doc.ExtractedText))
             {
                 try
                 {
-                    // Basic fallback generation or AI call block
-                    string snippet = doc.ExtractedText.Length > 600 ? doc.ExtractedText.Substring(0, 600) + "..." : doc.ExtractedText;
-                    doc.Summary = $"Key Summary for {doc.FileName}:\n\nThis document covers core concepts including: {snippet}";
+                    doc.Summary = await _summaryService.GenerateSummaryAsync(doc.ExtractedText);
                     await _context.SaveChangesAsync();
                 }
                 catch

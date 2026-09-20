@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,20 +10,20 @@ using EduSathi.Services;
 
 namespace EduSathi.Controllers.Api
 {
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [ApiController]
     [Route("api/v1/[controller]")]
     public class RoomsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly GeminiService _geminiService;
+        private readonly McqService _mcqService;
 
-        public RoomsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, GeminiService geminiService)
+        public RoomsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, McqService mcqService)
         {
             _context = context;
             _userManager = userManager;
-            _geminiService = geminiService;
+            _mcqService = mcqService;
         }
 
         // POST: /api/v1/rooms/join
@@ -76,7 +77,10 @@ namespace EduSathi.Controllers.Api
 
             // Generate Questions using AI service
             string extractedText = doc.ExtractedText.Length > 25000 ? doc.ExtractedText.Substring(0, 25000) : doc.ExtractedText;
-            string aiResponse = await _geminiService.GenerateMcqsAsync(extractedText, model.QuestionCount);
+
+            // McqService.GenerateMcqsAsync(text, level, questionCount) - level 2 = Medium.
+            // CreateRoomDto has no difficulty field yet, so Medium is the default for now.
+            string aiResponse = await _mcqService.GenerateMcqsAsync(extractedText, 2, model.QuestionCount);
 
             doc.Questions.Add(new Question
             {

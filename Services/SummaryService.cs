@@ -1,12 +1,33 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 
 namespace EduSathi.Services
 {
+    // Shape returned by GET /api/v1/Documents/{id}/summary's "data" field.
+    public class DocumentSummaryResult
+    {
+        [JsonPropertyName("overview")]
+        public List<string> Overview { get; set; } = new();
+
+        [JsonPropertyName("keyTakeaways")]
+        public List<KeyTakeaway> KeyTakeaways { get; set; } = new();
+    }
+
+    public class KeyTakeaway
+    {
+        [JsonPropertyName("label")]
+        public string Label { get; set; } = string.Empty;
+
+        [JsonPropertyName("value")]
+        public string Value { get; set; } = string.Empty;
+    }
+
     public class SummaryService
     {
         private readonly HttpClient _httpClient;
@@ -22,6 +43,7 @@ namespace EduSathi.Services
             _apiUrl = config["Gemini:Url"] ?? throw new ArgumentNullException("API URL is missing");
         }
 
+        // --- Existing method, used by the desktop Summary/Exam controllers. Untouched. ---
         public async Task<string> GenerateSummaryAsync(string extractedText)
         {
             var prompt = $@"
@@ -100,6 +122,95 @@ namespace EduSathi.Services
             {
                 return GetFallbackSummary();
             }
+        }
+
+        // --- New: structured overview + key-takeaways JSON for the mobile Answers tab. ---
+        // Returns null on any failure (no fallback) so the caller can mark the
+        // document Failed instead of silently persisting placeholder content.
+        public async Task<DocumentSummaryResult?> GenerateStructuredSummaryAsync(string extractedText)
+        {
+            var prompt = $@"
+    You are an expert educator creating a study aid from the text below.
+
+    Respond with ONLY a raw JSON object (no markdown code fences, no commentary, no extra text before or after) matching exactly this shape:
+    {{
+      ""overview"": [""point 1"", ""point 2"", ""point 3""],
+      ""keyTakeaways"": [
+        {{ ""label"": ""Concept"", ""value"": ""Explanation text"" }}
+      ]
+    }}
+
+    - ""overview"" should contain 3 to 6 concise bullet points summarizing the main ideas of the text.
+    - ""keyTakeaways"" should contain 4 to 8 entries, each a short label (a term, formula, or concept name) paired with a one- or two-sentence explanation.
+
+    Text to analyze:
+    {extractedText}";
+
+            var requestBody = new
+            {
+                contents = new[] { new { parts = new[] { new { text = prompt } } } }
+            };
+
+            var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+
+            HttpResponseMessage? response = null;
+            int delay = 2000;
+
+            for (int i = 0; i < 2; i++)
+            {
+                try
+                {
+                    response = await _httpClient.PostAsync($"{_apiUrl}?key={_apiKey}", jsonContent);
+                    if (response.IsSuccessStatusCode) break;
+                }
+                catch { /* ignore network blips and retry */ }
+
+                await Task.Delay(delay);
+                delay *= 2;
+            }
+
+            if (response == null || !response.IsSuccessStatusCode)
+                return null;
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(jsonResponse);
+                var rawText = doc.RootElement
+                    .GetProperty("candidates")[0]
+                    .GetProperty("content")
+                    .GetProperty("parts")[0]
+                    .GetProperty("text").GetString();
+
+                if (string.IsNullOrWhiteSpace(rawText))
+                    return null;
+
+                var cleaned = StripMarkdownFences(rawText);
+
+                return JsonSerializer.Deserialize<DocumentSummaryResult>(
+                    cleaned,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        // Gemini sometimes wraps JSON in ```json ... ``` despite instructions not to.
+        private static string StripMarkdownFences(string text)
+        {
+            var trimmed = text.Trim();
+            if (!trimmed.StartsWith("```"))
+                return trimmed;
+
+            int firstNewline = trimmed.IndexOf('\n');
+            if (firstNewline < 0) return trimmed;
+
+            var withoutOpeningFence = trimmed.Substring(firstNewline + 1);
+            int lastFence = withoutOpeningFence.LastIndexOf("```");
+            return lastFence >= 0 ? withoutOpeningFence.Substring(0, lastFence).Trim() : withoutOpeningFence.Trim();
         }
 
         private string GetFallbackSummary()

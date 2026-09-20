@@ -30,6 +30,8 @@ namespace EduSathi.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ContactNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -51,6 +53,61 @@ namespace EduSathi.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CustomRooms",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RoomCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatorId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RoomName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsQuizStarted = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsAccepted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CustomRooms", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "QuizHistories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    QuizTitle = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Category = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Score = table.Column<int>(type: "int", nullable: false),
+                    TotalQuestions = table.Column<int>(type: "int", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_QuizHistories", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "QuizRooms",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Code = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatorUserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Category = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_QuizRooms", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UploadedDocuments",
                 columns: table => new
                 {
@@ -61,7 +118,11 @@ namespace EduSathi.Migrations
                     FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ExtractedText = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Summary = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    UploadedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    UploadedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Pages = table.Column<int>(type: "int", nullable: false),
+                    SummaryJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ProcessingError = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -175,6 +236,83 @@ namespace EduSathi.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Friendships",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FriendId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    IsAccepted = table.Column<bool>(type: "bit", nullable: false),
+                    ConnectedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Friendships", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Friendships_AspNetUsers_FriendId",
+                        column: x => x.FriendId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Friendships_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoomParticipants",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    CustomRoomId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UserName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Score = table.Column<int>(type: "int", nullable: false),
+                    HasSubmitted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoomParticipants", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoomParticipants_CustomRooms_CustomRoomId",
+                        column: x => x.CustomRoomId,
+                        principalTable: "CustomRooms",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "QuizRoomParticipants",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    QuizRoomId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DisplayName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsHost = table.Column<bool>(type: "bit", nullable: false),
+                    JoinedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Score = table.Column<int>(type: "int", nullable: true),
+                    TotalQuestions = table.Column<int>(type: "int", nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_QuizRoomParticipants", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_QuizRoomParticipants_QuizRooms_QuizRoomId",
+                        column: x => x.QuizRoomId,
+                        principalTable: "QuizRooms",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Questions",
                 columns: table => new
                 {
@@ -195,6 +333,32 @@ namespace EduSathi.Migrations
                     table.PrimaryKey("PK_Questions", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Questions_UploadedDocuments_UploadedDocumentId",
+                        column: x => x.UploadedDocumentId,
+                        principalTable: "UploadedDocuments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "QuizRoomDocuments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    QuizRoomId = table.Column<int>(type: "int", nullable: false),
+                    UploadedDocumentId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_QuizRoomDocuments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_QuizRoomDocuments_QuizRooms_QuizRoomId",
+                        column: x => x.QuizRoomId,
+                        principalTable: "QuizRooms",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_QuizRoomDocuments_UploadedDocuments_UploadedDocumentId",
                         column: x => x.UploadedDocumentId,
                         principalTable: "UploadedDocuments",
                         principalColumn: "Id",
@@ -241,9 +405,39 @@ namespace EduSathi.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Friendships_FriendId",
+                table: "Friendships",
+                column: "FriendId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Friendships_UserId",
+                table: "Friendships",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Questions_UploadedDocumentId",
                 table: "Questions",
                 column: "UploadedDocumentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuizRoomDocuments_QuizRoomId",
+                table: "QuizRoomDocuments",
+                column: "QuizRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuizRoomDocuments_UploadedDocumentId",
+                table: "QuizRoomDocuments",
+                column: "UploadedDocumentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuizRoomParticipants_QuizRoomId",
+                table: "QuizRoomParticipants",
+                column: "QuizRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomParticipants_CustomRoomId",
+                table: "RoomParticipants",
+                column: "CustomRoomId");
         }
 
         /// <inheritdoc />
@@ -265,7 +459,22 @@ namespace EduSathi.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "Friendships");
+
+            migrationBuilder.DropTable(
                 name: "Questions");
+
+            migrationBuilder.DropTable(
+                name: "QuizHistories");
+
+            migrationBuilder.DropTable(
+                name: "QuizRoomDocuments");
+
+            migrationBuilder.DropTable(
+                name: "QuizRoomParticipants");
+
+            migrationBuilder.DropTable(
+                name: "RoomParticipants");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
@@ -275,6 +484,12 @@ namespace EduSathi.Migrations
 
             migrationBuilder.DropTable(
                 name: "UploadedDocuments");
+
+            migrationBuilder.DropTable(
+                name: "QuizRooms");
+
+            migrationBuilder.DropTable(
+                name: "CustomRooms");
         }
     }
 }
